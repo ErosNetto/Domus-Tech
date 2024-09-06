@@ -9,7 +9,6 @@ WiFiManager wm; // Instância do WiFiManager
 
 void setup() {
     Serial.begin(115200);
-    Serial.println("Domus Tech iniciando...");
 
     // Configura o pino do botão como entrada com pull-up interno
     pinMode(btnResetWifi, INPUT_PULLUP);
@@ -18,29 +17,21 @@ void setup() {
     lcd.init(); // Inicializa o LCD
     lcd.backlight(); // Liga a luz de fundo do LCD
 
-    // Exibe mensagem inicial
     lcd.setCursor(0, 0);
-    lcd.print("Carregando...");
+    lcd.print("   Domus Tech   ");
     lcd.setCursor(0, 1);
-    lcd.print("Aguarde");
+    lcd.print("Carregando...");
     delay(2000);
 
-    // Verifica se já existe um Wi-Fi salvo
-    // Verifica se o dispositivo já está conectado a uma rede Wi-Fi
-    if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("Wi-Fi salvo encontrado e conectado!");
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("WiFi conectado!");
-        lcd.setCursor(0, 1);
-        lcd.print(WiFi.SSID());
-    } else if (WiFi.SSID() != "") {
+    // Verifica se há redes Wi-Fi salvas
+    if (hasSavedNetworks()) {
         Serial.println("Wi-Fi salvo encontrado. Tentando conectar...");
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print("WiFi salvo");
         lcd.setCursor(0, 1);
         lcd.print("Conectando...");
+        
         WiFi.begin(); // Tenta conectar ao Wi-Fi salvo
 
         // Aguarda até conectar ou até o timeout de 10 segundos
@@ -62,22 +53,21 @@ void setup() {
             lcd.clear();
             lcd.setCursor(0, 0);
             lcd.print("Falha na conexao");
-            delay(2000);
+            delay(3000);
             lcd.setCursor(0, 1);
             lcd.print("Reiniciando...");
             delay(4000);
             ESP.restart(); // Reinicia a ESP32
         }
-    }  else {
-          // Caso não haja uma rede Wi-Fi salva
+    } else {
+        // Caso não haja uma rede Wi-Fi salva
         Serial.println("Nenhuma rede Wi-Fi salva.");
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("Nenhum Wi-Fi");
+        lcd.print("  Nenhuma rede  ");
         lcd.setCursor(0, 1);
-        lcd.print("Salvo encontrado");
+        lcd.print("  Wi-Fi  salva  ");
         delay(4000);
-        // Entra em modo de configuração de Wi-Fi
         iniciarModoConfiguracaoWiFi();
     }
 }
@@ -113,14 +103,37 @@ void loop() {
     }
 }
 
+// Função para verificar se há redes Wi-Fi salvas
+bool hasSavedNetworks() {
+    // Tenta conectar-se a uma rede salva sem alterar as configurações atuais
+    WiFi.begin(); // Começa a conexão com a rede salva
+
+    // Aguarda a conexão ou timeout de 5 segundos
+    unsigned long startAttemptTime = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 5000) {
+        delay(500);
+    }
+
+    bool connected = (WiFi.status() == WL_CONNECTED);
+    WiFi.disconnect(); // Desconecta-se da rede para não interferir com outras operações
+    return connected;
+}
+
 // Função para iniciar o modo de configuração de Wi-Fi
 void iniciarModoConfiguracaoWiFi() {
     Serial.println("Entrando em modo de configuração Wi-Fi...");
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print("Config Wi-Fi");
+    lcd.print("Entrando em modo");
     lcd.setCursor(0, 1);
-    lcd.print("Esperando...");
+    lcd.print("de config Wi-Fi");
+    delay(4000);
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Por favor, faca");
+    lcd.setCursor(0, 1);
+    lcd.print("a conexao");
+    delay(500);
     
     // Inicia o WiFiManager para modo de configuração
     bool res = wm.autoConnect("ESP32", "123123123");
@@ -138,7 +151,7 @@ void iniciarModoConfiguracaoWiFi() {
         Serial.println("Wi-Fi Configurado com sucesso!");
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("Conectado!");
+        lcd.print("WiFi conectado!");
         lcd.setCursor(0, 1);
         lcd.print(WiFi.SSID());
     }
@@ -169,4 +182,3 @@ void scrollSSID(String ssid) {
         }
     }
 }
-
