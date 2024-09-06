@@ -3,70 +3,94 @@
 
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Configura o LCD 16x2
 
-const int buttonPin = 5; // Pino do botão (GPIO 5)
-
-WiFiManager wm; // Cria uma instância do WiFiManager
+const int btnResetWifi = 5; // Pino do botão (GPIO 5)
+const int btnResetESP32 = 15; // Pino do botão (GPIO 15)
+WiFiManager wm; // Instância do WiFiManager
 
 void setup() {
     Serial.begin(115200);
+    Serial.println("Domus Tech iniciando...");
 
     // Configura o pino do botão como entrada com pull-up interno
-    pinMode(buttonPin, INPUT_PULLUP);
+    pinMode(btnResetWifi, INPUT_PULLUP);
+    pinMode(btnResetESP32, INPUT_PULLUP);
 
     lcd.init(); // Inicializa o LCD
     lcd.backlight(); // Liga a luz de fundo do LCD
 
-    // Exibe mensagem de configuração no display antes de iniciar a conexão
+    // Exibe mensagem inicial
     lcd.setCursor(0, 0);
-    lcd.print("Aguardando...");
-    delay(500); // Aguarda para garantir que a mensagem seja visível
+    lcd.print("Carregando...");
+    lcd.setCursor(0, 1);
+    lcd.print("Aguarde");
+    delay(2000);
 
-    // Inicia o modo de configuração se necessário
-    bool res = wm.autoConnect("ESP32", "123123123");
-    if (!res) {
-        // Caso o modo de configuração esteja ativo, atualize o display
-        if (wm.getConfigPortalActive()) {
-            lcd.clear();
-            lcd.setCursor(0, 0);
-            lcd.print("Config Wi-Fi...");
-            // Aguarda um pouco para garantir que a mensagem seja visível
-            delay(1000);
-        } else {
-            // Caso contrário, exibe mensagem de falha na conexão
-            Serial.println("Falha na conexão");
-            lcd.clear();
-            lcd.setCursor(0, 0);
-            lcd.print("Falha Conexao");
-            delay(3000);
-            ESP.restart(); // Reinicia em caso de falha
-        }
-    } else {
-        // Caso contrário, exibe mensagem de conexão
-        Serial.println("Conectado!");
+    // Verifica se já existe um Wi-Fi salvo
+    // Verifica se o dispositivo já está conectado a uma rede Wi-Fi
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("Wi-Fi salvo encontrado e conectado!");
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("Conectado!");
+        lcd.print("WiFi conectado!");
         lcd.setCursor(0, 1);
-        lcd.print(WiFi.SSID()); // Exibe o nome da rede conectada
+        lcd.print(WiFi.SSID());
+    } else if (WiFi.SSID() != "") {
+        Serial.println("Wi-Fi salvo encontrado. Tentando conectar...");
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("WiFi salvo");
+        lcd.setCursor(0, 1);
+        lcd.print("Conectando...");
+        WiFi.begin(); // Tenta conectar ao Wi-Fi salvo
+
+        // Aguarda até conectar ou até o timeout de 10 segundos
+        unsigned long startAttemptTime = millis();
+        while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 10000) {
+            delay(500);
+            Serial.print(".");
+        }
+
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println("Conectado ao Wi-Fi!");
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            lcd.print("WiFi conectado!");
+            lcd.setCursor(0, 1);
+            lcd.print(WiFi.SSID());
+        } else {
+            Serial.println("Falha ao conectar ao Wi-Fi salvo.");
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            lcd.print("Falha na conexao");
+            delay(2000);
+            lcd.setCursor(0, 1);
+            lcd.print("Reiniciando...");
+            delay(4000);
+            ESP.restart(); // Reinicia a ESP32
+        }
+    }  else {
+          // Caso não haja uma rede Wi-Fi salva
+        Serial.println("Nenhuma rede Wi-Fi salva.");
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Nenhum Wi-Fi");
+        lcd.setCursor(0, 1);
+        lcd.print("Salvo encontrado");
+        delay(4000);
+        // Entra em modo de configuração de Wi-Fi
+        iniciarModoConfiguracaoWiFi();
     }
 }
 
+
 void loop() {
-    // Verifica se o WiFiManager está no modo de configuração
-    if (wm.getConfigPortalActive()) {
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Config Wi-Fi..."); // Mostra no LCD que está no modo de configuração
-        delay(1000);
-    } else {
-        // Exibe o SSID (nome da rede) na segunda linha do LCD com rolagem, se necessário
-        if (WiFi.status() == WL_CONNECTED) {
-            scrollSSID(WiFi.SSID());
-        }
+    // Exibe o SSID (nome da rede) na segunda linha do LCD com rolagem, se necessário
+    if (WiFi.status() == WL_CONNECTED) {
+        scrollSSID(WiFi.SSID());
     }
 
     // Verifica continuamente se o botão foi pressionado para resetar o Wi-Fi
-    if (digitalRead(buttonPin) == LOW) {
+    if (digitalRead(btnResetWifi) == LOW) {
         Serial.println("Botão pressionado. Resetando configurações de Wi-Fi...");
         lcd.clear();
         lcd.setCursor(0, 0);
@@ -77,18 +101,63 @@ void loop() {
         delay(3000);        
         ESP.restart(); // Reinicia o ESP32 para aplicar as mudanças
     }
+
+    // Reinicia a ESP32
+    if (digitalRead(btnResetESP32) == LOW) {
+        Serial.println("Botão pressionado. Reiniciando...");
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Reiniciando...");
+        delay(5000);        
+        ESP.restart(); // Reinicia o ESP32
+    }
+}
+
+// Função para iniciar o modo de configuração de Wi-Fi
+void iniciarModoConfiguracaoWiFi() {
+    Serial.println("Entrando em modo de configuração Wi-Fi...");
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Config Wi-Fi");
+    lcd.setCursor(0, 1);
+    lcd.print("Esperando...");
+    
+    // Inicia o WiFiManager para modo de configuração
+    bool res = wm.autoConnect("ESP32", "123123123");
+    if (!res) {
+        Serial.println("Falha na configuração do Wi-Fi");
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Falha Config");
+        delay(2000);
+        lcd.setCursor(0, 1);
+        lcd.print("Reiniciando...");
+        delay(4000);
+        ESP.restart(); // Reinicia a ESP32
+    } else {
+        Serial.println("Wi-Fi Configurado com sucesso!");
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Conectado!");
+        lcd.setCursor(0, 1);
+        lcd.print(WiFi.SSID());
+    }
 }
 
 // Função para rolar o nome do SSID no display
 void scrollSSID(String ssid) {
     int len = ssid.length();
+    // Se o SSID couber na tela, exibe diretamente
     if (len <= 16) {
-        // Se o SSID couber na tela, exibe diretamente
         lcd.setCursor(0, 1);
         lcd.print(ssid);
     } else {
+        // Exibe o SSID parado por 3 segundos antes de iniciar a rolagem
+        lcd.setCursor(0, 1);
+        lcd.print(ssid.substring(0, 16));
+        delay(3000);
+        
         ssid += "   ";
-        // Caso contrário, faz rolar o nome
         for (int start = 0; start < len + 3; start++) {
             String scrollText = ssid.substring(start);
             if (scrollText.length() < 16) {
@@ -100,3 +169,4 @@ void scrollSSID(String ssid) {
         }
     }
 }
+
