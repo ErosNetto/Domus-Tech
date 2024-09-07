@@ -105,18 +105,8 @@ void loop() {
 
 // Função para verificar se há redes Wi-Fi salvas
 bool hasSavedNetworks() {
-    // Tenta conectar-se a uma rede salva sem alterar as configurações atuais
-    WiFi.begin(); // Começa a conexão com a rede salva
-
-    // Aguarda a conexão ou timeout de 5 segundos
-    unsigned long startAttemptTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 5000) {
-        delay(500);
-    }
-
-    bool connected = (WiFi.status() == WL_CONNECTED);
-    WiFi.disconnect(); // Desconecta-se da rede para não interferir com outras operações
-    return connected;
+    String savedSSID = WiFi.SSID(); // Obtém o SSID salvo
+    return (savedSSID != "");
 }
 
 // Função para iniciar o modo de configuração de Wi-Fi
@@ -132,7 +122,7 @@ void iniciarModoConfiguracaoWiFi() {
     lcd.setCursor(0, 0);
     lcd.print("Por favor, faca");
     lcd.setCursor(0, 1);
-    lcd.print("a conexao");
+    lcd.print("a configuracao");
     delay(500);
     
     // Inicia o WiFiManager para modo de configuração
@@ -142,7 +132,7 @@ void iniciarModoConfiguracaoWiFi() {
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print("Falha Config");
-        delay(2000);
+        delay(3000);
         lcd.setCursor(0, 1);
         lcd.print("Reiniciando...");
         delay(4000);
