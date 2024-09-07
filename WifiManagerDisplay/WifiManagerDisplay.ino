@@ -16,15 +16,17 @@ void setup() {
 
     lcd.init(); // Inicializa o LCD
     lcd.backlight(); // Liga a luz de fundo do LCD
-
     lcd.setCursor(0, 0);
     lcd.print("   Domus Tech   ");
     lcd.setCursor(0, 1);
     lcd.print("Carregando...");
     delay(2000);
 
+    // Inicializa o Wi-Fi antes de verificar redes salvas
+    WiFi.begin();
     // Verifica se há redes Wi-Fi salvas
     if (hasSavedNetworks()) {
+        // Tenta conectar à rede salva
         Serial.println("Wi-Fi salvo encontrado. Tentando conectar...");
         lcd.clear();
         lcd.setCursor(0, 0);
@@ -45,7 +47,7 @@ void setup() {
             Serial.println("Conectado ao Wi-Fi!");
             lcd.clear();
             lcd.setCursor(0, 0);
-            lcd.print("WiFi conectado!");
+            lcd.print("WiFi conectado!1");
             lcd.setCursor(0, 1);
             lcd.print(WiFi.SSID());
         } else {
@@ -75,9 +77,9 @@ void setup() {
 
 void loop() {
     // Exibe o SSID (nome da rede) na segunda linha do LCD com rolagem, se necessário
-    if (WiFi.status() == WL_CONNECTED) {
-        scrollSSID(WiFi.SSID());
-    }
+    // if (WiFi.status() == WL_CONNECTED) {
+    //     scrollSSID(WiFi.SSID());
+    // }
 
     // Verifica continuamente se o botão foi pressionado para resetar o Wi-Fi
     if (digitalRead(btnResetWifi) == LOW) {
@@ -105,8 +107,14 @@ void loop() {
 
 // Função para verificar se há redes Wi-Fi salvas
 bool hasSavedNetworks() {
-    String savedSSID = WiFi.SSID(); // Obtém o SSID salvo
-    return (savedSSID != "");
+    // Aguarda até conectar ou até o timeout de 5 segundos
+    unsigned long startAttemptTime = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 5000) {
+        delay(500);
+    }
+
+    // Verifica se conectou ou se há SSID salvo
+    return (WiFi.status() == WL_CONNECTED || WiFi.SSID() != "");
 }
 
 // Função para iniciar o modo de configuração de Wi-Fi
@@ -141,7 +149,7 @@ void iniciarModoConfiguracaoWiFi() {
         Serial.println("Wi-Fi Configurado com sucesso!");
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("WiFi conectado!");
+        lcd.print("WiFi conectado!2");
         lcd.setCursor(0, 1);
         lcd.print(WiFi.SSID());
     }
