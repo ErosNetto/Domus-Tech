@@ -22,7 +22,7 @@ void setup() {
     lcd.print("Carregando...");
     delay(2000);
 
-    // Verifica se há redes Wi-Fi salvas
+    // Verifica se há redes Wi-Fi salvas no WiFiManager
     if (hasSavedNetworks()) {
         Serial.println("Wi-Fi salvo encontrado. Tentando conectar...");
         lcd.clear();
@@ -30,6 +30,7 @@ void setup() {
         lcd.print("WiFi salvo");
         lcd.setCursor(0, 1);
         lcd.print("Conectando...");
+        delay(2000);
 
         WiFi.begin(); // Tenta conectar ao Wi-Fi salvo
 
@@ -70,7 +71,6 @@ void setup() {
     }
 }
 
-
 void loop() {
     // Verifica continuamente se o botão foi pressionado para resetar o Wi-Fi
     if (digitalRead(btnResetWifi) == LOW) {
@@ -96,10 +96,23 @@ void loop() {
     }
 }
 
-// Função para verificar se há redes Wi-Fi salvas
+// Função para verificar se há redes Wi-Fi salvas no WiFiManager
 bool hasSavedNetworks() {
-    return WiFi.SSID().length() > 0;
+    WiFi.mode(WIFI_STA); // Garante que estamos no modo estação
+    WiFi.begin();        // Inicia o WiFi com credenciais salvas, se houver
+    
+    delay(1000);
+        
+    // Verifica se temos um SSID salvo
+    if (WiFi.SSID() != "") {
+        Serial.println("SSID salvo encontrado: " + WiFi.SSID());
+        return true;
+    } else {
+        Serial.println("Nenhum SSID salvo encontrado.");
+        return false;
+    }
 }
+
 
 // Função para iniciar o modo de configuração de Wi-Fi
 void iniciarModoConfiguracaoWiFi() {
