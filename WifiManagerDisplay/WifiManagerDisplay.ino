@@ -22,18 +22,15 @@ void setup() {
     lcd.print("Carregando...");
     delay(2000);
 
-    // Inicializa o Wi-Fi antes de verificar redes salvas
-    WiFi.begin();
     // Verifica se há redes Wi-Fi salvas
     if (hasSavedNetworks()) {
-        // Tenta conectar à rede salva
         Serial.println("Wi-Fi salvo encontrado. Tentando conectar...");
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print("WiFi salvo");
         lcd.setCursor(0, 1);
         lcd.print("Conectando...");
-        
+
         WiFi.begin(); // Tenta conectar ao Wi-Fi salvo
 
         // Aguarda até conectar ou até o timeout de 10 segundos
@@ -62,7 +59,6 @@ void setup() {
             ESP.restart(); // Reinicia a ESP32
         }
     } else {
-        // Caso não haja uma rede Wi-Fi salva
         Serial.println("Nenhuma rede Wi-Fi salva.");
         lcd.clear();
         lcd.setCursor(0, 0);
@@ -76,11 +72,6 @@ void setup() {
 
 
 void loop() {
-    // Exibe o SSID (nome da rede) na segunda linha do LCD com rolagem, se necessário
-    // if (WiFi.status() == WL_CONNECTED) {
-    //     scrollSSID(WiFi.SSID());
-    // }
-
     // Verifica continuamente se o botão foi pressionado para resetar o Wi-Fi
     if (digitalRead(btnResetWifi) == LOW) {
         Serial.println("Botão pressionado. Resetando configurações de Wi-Fi...");
@@ -107,14 +98,7 @@ void loop() {
 
 // Função para verificar se há redes Wi-Fi salvas
 bool hasSavedNetworks() {
-    // Aguarda até conectar ou até o timeout de 5 segundos
-    unsigned long startAttemptTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 5000) {
-        delay(500);
-    }
-
-    // Verifica se conectou ou se há SSID salvo
-    return (WiFi.status() == WL_CONNECTED || WiFi.SSID() != "");
+    return WiFi.SSID().length() > 0;
 }
 
 // Função para iniciar o modo de configuração de Wi-Fi
