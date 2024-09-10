@@ -30,7 +30,7 @@ void setup() {
         lcd.print("WiFi salvo");
         lcd.setCursor(0, 1);
         lcd.print("Conectando...");
-        delay(2000);
+        delay(500);
 
         WiFi.begin(); // Tenta conectar ao Wi-Fi salvo
 
@@ -60,7 +60,7 @@ void setup() {
             ESP.restart(); // Reinicia a ESP32
         }
     } else {
-        Serial.println("Nenhuma rede Wi-Fi salva.");
+        Serial.println("Nenhuma rede Wi-Fi salva foi encontrada.");
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print("  Nenhuma rede  ");
@@ -100,19 +100,16 @@ void loop() {
 bool hasSavedNetworks() {
     WiFi.mode(WIFI_STA); // Garante que estamos no modo estação
     WiFi.begin();        // Inicia o WiFi com credenciais salvas, se houver
-    
-    delay(1000);
+
+    delay(500);
         
     // Verifica se temos um SSID salvo
     if (WiFi.SSID() != "") {
-        Serial.println("SSID salvo encontrado: " + WiFi.SSID());
         return true;
     } else {
-        Serial.println("Nenhum SSID salvo encontrado.");
         return false;
     }
 }
-
 
 // Função para iniciar o modo de configuração de Wi-Fi
 void iniciarModoConfiguracaoWiFi() {
@@ -131,7 +128,7 @@ void iniciarModoConfiguracaoWiFi() {
     delay(500);
     
     // Inicia o WiFiManager para modo de configuração
-    bool res = wm.autoConnect("ESP32", "123123123");
+    bool res = wm.autoConnect("Domus-Tech", "123123123");
     if (!res) {
         Serial.println("Falha na configuração do Wi-Fi");
         lcd.clear();
@@ -146,7 +143,7 @@ void iniciarModoConfiguracaoWiFi() {
         Serial.println("Wi-Fi Configurado com sucesso!");
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("WiFi conectado!2");
+        lcd.print("WiFi conectado!");
         lcd.setCursor(0, 1);
         lcd.print(WiFi.SSID());
     }
