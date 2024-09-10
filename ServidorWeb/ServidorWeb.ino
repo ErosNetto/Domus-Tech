@@ -68,9 +68,15 @@ void setup() {
             Serial.println("IP atribuído: " + WiFi.localIP().toString()); // Adiciona a mensagem de IP
             lcd.clear();
             lcd.setCursor(0, 0);
-            lcd.print("WiFi conectado!");
+            lcd.print("WiFi conectado!1");
             lcd.setCursor(0, 1);
             lcd.print(WiFi.SSID());
+            delay(5000);
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            lcd.print("IP atribuido: ");
+            lcd.setCursor(0, 1);
+            lcd.print(WiFi.localIP().toString());
         } else {
             Serial.println("Falha ao conectar ao Wi-Fi salvo.");
             lcd.clear();
@@ -197,9 +203,15 @@ void iniciarModoConfiguracaoWiFi() {
         Serial.println("IP atribuído: " + WiFi.localIP().toString()); // Adiciona a mensagem de IP
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("WiFi conectado!");
+        lcd.print("WiFi conectado!2");
         lcd.setCursor(0, 1);
         lcd.print(WiFi.SSID());
+        delay(5000);
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("IP atribuído: ");
+        lcd.setCursor(0, 1);
+        lcd.print(WiFi.localIP().toString());
     }
 }
 
