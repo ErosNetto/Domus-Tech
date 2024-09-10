@@ -1,11 +1,16 @@
 #include <WiFiManager.h> // Biblioteca do WiFiManager
 #include <LiquidCrystal_I2C.h> // Biblioteca do LCD
+#include <ESPAsyncWebServer.h> // Biblioteca para criar um servidor
+#include <AsyncTCP.h> // Biblioteca para o AsyncWebServer
 
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Configura o LCD 16x2
 
 const int btnResetWifi = 5; // Pino do botão (GPIO 5)
 const int btnResetESP32 = 15; // Pino do botão (GPIO 15)
+const int ledPin1 = 2; // Pino do LED
+
 WiFiManager wm; // Instância do WiFiManager
+AsyncWebServer server(80);
 
 void setup() {
     Serial.begin(115200);
@@ -13,6 +18,8 @@ void setup() {
     // Configura o pino do botão como entrada com pull-up interno
     pinMode(btnResetWifi, INPUT_PULLUP);
     pinMode(btnResetESP32, INPUT_PULLUP);
+
+    pinMode(ledPin1, OUTPUT);
 
     lcd.init(); // Inicializa o LCD
     lcd.backlight(); // Liga a luz de fundo do LCD
@@ -69,6 +76,29 @@ void setup() {
         delay(4000);
         iniciarModoConfiguracaoWiFi();
     }
+
+
+    // TESTE
+    // Rota para controlar LEDs
+    server.on("/led", HTTP_GET, [](AsyncWebServerRequest *request){
+        if (request->hasParam("pin") && request->hasParam("state")) {
+            int pin = request->getParam("pin")->value().toInt();
+            int ledState = request->getParam("state")->value().toInt();
+            digitalWrite(pin, ledState);
+            String state = (ledState == HIGH) ? "ON" : "OFF";
+            request->send(200, "text/plain", "LED " + String(pin) + " is " + state);
+        } else {
+            request->send(400, "text/plain", "Missing parameters");
+        }
+    });
+
+    // Rota para obter o status dos LEDs
+    server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request){
+        String status = "LED1: " + String(digitalRead(ledPin1));
+        request->send(200, "text/plain", status);
+    });
+
+    server.begin();
 }
 
 void loop() {

@@ -22,7 +22,7 @@ void setup() {
     lcd.print("Carregando...");
     delay(2000);
 
-    bool res = wm.autoConnect("Domus-Tech", "123123123");
+    bool res = wm.autoConnect("Domus_Tech", "123123123");
 
     if(!res) {
         Serial.println("Nenhuma rede Wi-Fi salva ou falha ao conectar.");
