@@ -1,3 +1,4 @@
+#include <WiFi.h>
 #include <WiFiManager.h> // Biblioteca do WiFiManager
 #include <LiquidCrystal_I2C.h> // Biblioteca do LCD
 #include <ESPAsyncWebServer.h> // Biblioteca para criar um servidor
@@ -7,10 +8,15 @@ LiquidCrystal_I2C lcd(0x27, 16, 2); // Configura o LCD 16x2
 
 const int btnResetWifi = 5; // Pino do botão (GPIO 5)
 const int btnResetESP32 = 15; // Pino do botão (GPIO 15)
-const int ledPin1 = 2; // Pino do LED
+const int ledPin1 = 4; // Pino do LED
 
 WiFiManager wm; // Instância do WiFiManager
 AsyncWebServer server(80);
+
+// Configurações do IP estático
+// IPAddress local_IP(192, 168, 1, 184);  // IP fixo que você deseja usar
+// IPAddress gateway(192, 168, 1, 1);     // Gateway da sua rede
+// IPAddress subnet(255, 255, 255, 0);    // Máscara de sub-rede
 
 void setup() {
     Serial.begin(115200);
@@ -19,7 +25,13 @@ void setup() {
     pinMode(btnResetWifi, INPUT_PULLUP);
     pinMode(btnResetESP32, INPUT_PULLUP);
 
-    pinMode(ledPin1, OUTPUT);
+    pinMode(ledPin1, OUTPUT); // Configura o pino como saída
+
+
+    digitalWrite(ledPin1, HIGH); // Liga o LED
+    delay(1000);                // Aguarda 1 segundo
+    digitalWrite(ledPin1, LOW);  // Desliga o LED
+    delay(1000);                // Aguarda 1 segundo
 
     lcd.init(); // Inicializa o LCD
     lcd.backlight(); // Liga a luz de fundo do LCD
@@ -29,6 +41,9 @@ void setup() {
     lcd.print("Carregando...");
     delay(2000);
 
+    // Configura a rede Wi-Fi com IP estático
+    // WiFi.config(local_IP, gateway, subnet); // Define o IP estático
+
     // Verifica se há redes Wi-Fi salvas no WiFiManager
     if (hasSavedNetworks()) {
         Serial.println("Wi-Fi salvo encontrado. Tentando conectar...");
@@ -37,7 +52,7 @@ void setup() {
         lcd.print("WiFi salvo");
         lcd.setCursor(0, 1);
         lcd.print("Conectando...");
-        delay(500);
+        delay(2000);
 
         WiFi.begin(); // Tenta conectar ao Wi-Fi salvo
 
@@ -49,7 +64,8 @@ void setup() {
         }
 
         if (WiFi.status() == WL_CONNECTED) {
-            Serial.println("Conectado ao Wi-Fi!");
+            Serial.println("Conectado ao Wi-Fi! " + WiFi.SSID());
+            Serial.println("IP atribuído: " + WiFi.localIP().toString()); // Adiciona a mensagem de IP
             lcd.clear();
             lcd.setCursor(0, 0);
             lcd.print("WiFi conectado!");
@@ -77,13 +93,16 @@ void setup() {
         iniciarModoConfiguracaoWiFi();
     }
 
-
     // TESTE
     // Rota para controlar LEDs
     server.on("/led", HTTP_GET, [](AsyncWebServerRequest *request){
         if (request->hasParam("pin") && request->hasParam("state")) {
             int pin = request->getParam("pin")->value().toInt();
             int ledState = request->getParam("state")->value().toInt();
+
+            Serial.println("Received pin: " + String(pin));
+            Serial.println("Received state: " + String(ledState));
+
             digitalWrite(pin, ledState);
             String state = (ledState == HIGH) ? "ON" : "OFF";
             request->send(200, "text/plain", "LED " + String(pin) + " is " + state);
@@ -125,9 +144,9 @@ void loop() {
         ESP.restart();
     }
 
-    if (WiFi.status() == WL_CONNECTED) {
-        scrollSSID(WiFi.SSID());
-    }
+    // if (WiFi.status() == WL_CONNECTED) {
+    //     scrollSSID(WiFi.SSID());
+    // }
 }
 
 // Função para verificar se há redes Wi-Fi salvas no WiFiManager
@@ -174,7 +193,8 @@ void iniciarModoConfiguracaoWiFi() {
         delay(4000);
         ESP.restart();
     } else {
-        Serial.println("Wi-Fi Configurado com sucesso!");
+        Serial.println("Wi-Fi Configurado com sucesso! " + WiFi.SSID());
+        Serial.println("IP atribuído: " + WiFi.localIP().toString()); // Adiciona a mensagem de IP
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print("WiFi conectado!");
