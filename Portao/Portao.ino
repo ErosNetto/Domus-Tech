@@ -18,6 +18,7 @@ enum EstadoPortao {
 };
 
 EstadoPortao estadoAtual = PARADO;  // Estado inicial do portão
+EstadoPortao ultimoEstado = PARADO; // Armazenar o último estado antes de parar
 
 void setup() {
   // Inicializa a comunicação serial
@@ -46,26 +47,41 @@ void loop() {
     delay(200);  // Debounce simples
     Serial.println("Botão de controle único pressionado.");
 
-    // Alterar o estado do portão a cada pressionamento
+    // Se o portão estiver parado, decide o próximo movimento
     if (estadoAtual == PARADO) {
-      if (digitalRead(limite_fechado) == LOW) { // Se o portão estiver totalmente fechado
+      // Se o portão estiver fechado, abre
+      if (digitalRead(limite_fechado) == LOW) {
         Serial.println("Portão totalmente fechado. Abrindo portão.");
         abrirPortao();
         estadoAtual = ABRINDO;
-      } else if (digitalRead(limite_aberto) == LOW) { // Se o portão estiver totalmente aberto
+        ultimoEstado = ABRINDO;
+      } 
+      // Se o portão estiver aberto, fecha
+      else if (digitalRead(limite_aberto) == LOW) {
         Serial.println("Portão totalmente aberto. Fechando portão.");
         fecharPortao();
         estadoAtual = FECHANDO;
+        ultimoEstado = FECHANDO;
+      } 
+      // Se o portão estiver no meio do caminho, inverte o último movimento
+      else {
+        Serial.println("Portão parado no meio do caminho.");
+        if (ultimoEstado == ABRINDO) {
+          Serial.println("Invertendo para fechar.");
+          fecharPortao();
+          estadoAtual = FECHANDO;
+        } else if (ultimoEstado == FECHANDO) {
+          Serial.println("Invertendo para abrir.");
+          abrirPortao();
+          estadoAtual = ABRINDO;
+        }
       }
-    } 
-    else if (estadoAtual == ABRINDO) {
-      Serial.println("Portão em movimento (abrindo). Parando portão.");
+    }
+    // Se o portão estiver em movimento, para
+    else if (estadoAtual == ABRINDO || estadoAtual == FECHANDO) {
+      Serial.println("Portão em movimento. Parando portão.");
       pararMotor();
-      estadoAtual = PARADO;
-    } 
-    else if (estadoAtual == FECHANDO) {
-      Serial.println("Portão em movimento (fechando). Parando portão.");
-      pararMotor();
+      ultimoEstado = estadoAtual; // Salva o estado atual antes de parar
       estadoAtual = PARADO;
     }
   }
