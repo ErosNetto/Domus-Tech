@@ -21,104 +21,96 @@ EstadoPortao estadoAtual = PARADO;  // Estado inicial do portão
 EstadoPortao ultimoEstado = PARADO; // Armazenar o último estado antes de parar
 
 void setup() {
-  // Inicializa a comunicação serial
   Serial.begin(115200);
 
-  // Configuração dos pinos de saída para o motor
+  // Configuração dos pinos
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
   pinMode(ena, OUTPUT);
-
-  // Configuração dos pinos dos botões de fim de curso
   pinMode(limite_aberto, INPUT_PULLUP);
   pinMode(limite_fechado, INPUT_PULLUP);
-
-  // Configuração do botão único de controle
   pinMode(botao_unico, INPUT_PULLUP);
 
-  // Inicializa o motor parado
   pararMotor();
-  Serial.println("Sistema inicializado. Portão parado.");
 }
 
 void loop() {
   // Verifica o estado do botão único
   if (digitalRead(botao_unico) == LOW) {
-    delay(200);  // Debounce simples
-    Serial.println("Botão de controle único pressionado.");
+    delay(200);  // Debounce
 
-    // Se o portão estiver parado, decide o próximo movimento
     if (estadoAtual == PARADO) {
-      // Se o portão estiver fechado, abre
-      if (digitalRead(limite_fechado) == LOW) {
-        Serial.println("Portão totalmente fechado. Abrindo portão.");
-        abrirPortao();
-        estadoAtual = ABRINDO;
-        ultimoEstado = ABRINDO;
-      } 
-      // Se o portão estiver aberto, fecha
-      else if (digitalRead(limite_aberto) == LOW) {
-        Serial.println("Portão totalmente aberto. Fechando portão.");
-        fecharPortao();
-        estadoAtual = FECHANDO;
-        ultimoEstado = FECHANDO;
-      } 
-      // Se o portão estiver no meio do caminho, inverte o último movimento
-      else {
-        Serial.println("Portão parado no meio do caminho.");
-        if (ultimoEstado == ABRINDO) {
-          Serial.println("Invertendo para fechar.");
-          fecharPortao();
-          estadoAtual = FECHANDO;
-        } else if (ultimoEstado == FECHANDO) {
-          Serial.println("Invertendo para abrir.");
-          abrirPortao();
-          estadoAtual = ABRINDO;
-        }
-      }
-    }
-    // Se o portão estiver em movimento, para
-    else if (estadoAtual == ABRINDO || estadoAtual == FECHANDO) {
-      Serial.println("Portão em movimento. Parando portão.");
+      handlePortaoParado();
+    } else {
       pararMotor();
-      ultimoEstado = estadoAtual; // Salva o estado atual antes de parar
+      ultimoEstado = estadoAtual;
       estadoAtual = PARADO;
     }
   }
 
-  // Verifica os limites do portão para parar o motor automaticamente
+  // Verifica limites do portão
+  verificarLimites();
+}
+
+// Função para decidir o próximo movimento do portão
+void handlePortaoParado() {
+  if (digitalRead(limite_fechado) == LOW) {
+    Serial.println("Portão totalmente fechado. Abrindo portão.");
+    abrirPortao();
+    estadoAtual = ABRINDO;
+    ultimoEstado = ABRINDO;
+  } else if (digitalRead(limite_aberto) == LOW) {
+    Serial.println("Portão totalmente aberto. Fechando portão.");
+    fecharPortao();
+    estadoAtual = FECHANDO;
+    ultimoEstado = FECHANDO;
+  } else {
+    Serial.println("Portão parado no meio do caminho.");
+    if (ultimoEstado == ABRINDO) {
+      Serial.println("Invertendo para fechar.");
+      fecharPortao();
+      estadoAtual = FECHANDO;
+    } else if (ultimoEstado == FECHANDO) {
+      Serial.println("Invertendo para abrir.");
+      abrirPortao();
+      estadoAtual = ABRINDO;
+    }
+  }
+}
+
+// Função para verifica os limites do portão
+void verificarLimites() {
   if (estadoAtual == ABRINDO && digitalRead(limite_aberto) == LOW) {
-    Serial.println("Portão completamente aberto. Parando motor.");
+    Serial.println("Portão completamente aberto.");
     pararMotor();
     estadoAtual = PARADO;
-  }
-  if (estadoAtual == FECHANDO && digitalRead(limite_fechado) == LOW) {
-    Serial.println("Portão completamente fechado. Parando motor.");
+  } else if (estadoAtual == FECHANDO && digitalRead(limite_fechado) == LOW) {
+    Serial.println("Portão completamente fechado.");
     pararMotor();
     estadoAtual = PARADO;
   }
 }
 
-// Função para abrir o portão (girar o motor em uma direção)
+// Função para abrir o portão
 void abrirPortao() {
   digitalWrite(in1, HIGH);
   digitalWrite(in2, LOW);
-  analogWrite(ena, 100); // Velocidade de 100
-  Serial.println("Portão abrindo...");
+  analogWrite(ena, 80);
+  Serial.println("Portão abrindo...\n");
 }
 
-// Função para fechar o portão (girar o motor na outra direção)
+// Função para fechar o portão
 void fecharPortao() {
   digitalWrite(in1, LOW);
   digitalWrite(in2, HIGH);
-  analogWrite(ena, 100); // Velocidade de 100
-  Serial.println("Portão fechando...");
+  analogWrite(ena, 80);
+  Serial.println("Portão fechando...\n");
 }
 
 // Função para parar o motor
 void pararMotor() {
   digitalWrite(in1, LOW);
   digitalWrite(in2, LOW);
-  analogWrite(ena, 0);  // Parar o motor
-  Serial.println("Motor parado.");
+  analogWrite(ena, 0);
+  Serial.println("Motor parado.\n");
 }
