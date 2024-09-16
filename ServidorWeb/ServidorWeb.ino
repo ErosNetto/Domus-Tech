@@ -27,7 +27,6 @@ void setup() {
 
     pinMode(ledPin1, OUTPUT); // Configura o pino como saída
 
-
     digitalWrite(ledPin1, HIGH); // Liga o LED
     delay(1000);                // Aguarda 1 segundo
     digitalWrite(ledPin1, LOW);  // Desliga o LED
@@ -108,8 +107,9 @@ void setup() {
 
             Serial.println("Received pin: " + String(pin));
             Serial.println("Received state: " + String(ledState));
-
-            digitalWrite(pin, ledState);
+            
+            pinMode(pin, OUTPUT); // Certifica que o pino está configurado como saída
+            digitalWrite(pin, ledState); // Liga ou desliga o LED
             String state = (ledState == HIGH) ? "ON" : "OFF";
             request->send(200, "text/plain", "LED " + String(pin) + " is " + state);
         } else {
