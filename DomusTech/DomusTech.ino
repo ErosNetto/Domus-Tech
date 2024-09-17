@@ -4,6 +4,9 @@
 #include <ESPAsyncWebServer.h> // Biblioteca para criar um servidor
 #include <AsyncTCP.h> // Biblioteca para o AsyncWebServer
 
+#include "alarme.h" // Função alarme
+#include "portao.h" // Função portao
+
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Configura o LCD 16x2
 
 const int btnResetWifi = 5; // Pino do botão (GPIO 5)
@@ -14,9 +17,9 @@ WiFiManager wm; // Instância do WiFiManager
 AsyncWebServer server(80);
 
 // Configurações do IP estático
-// IPAddress local_IP(192, 168, 1, 184);  // IP fixo que você deseja usar
-// IPAddress gateway(192, 168, 1, 1);     // Gateway da sua rede
-// IPAddress subnet(255, 255, 255, 0);    // Máscara de sub-rede
+IPAddress local_IP(192, 168, 18, 123);  // IP fixo desejado
+IPAddress gateway(192, 168, 18, 1);     // Gateway na mesma sub-rede
+IPAddress subnet(255, 255, 255, 0);    // Máscara de sub-rede padrão
 
 void setup() {
     Serial.begin(115200);
@@ -24,6 +27,10 @@ void setup() {
     // Configura o pino do botão como entrada com pull-up interno
     pinMode(btnResetWifi, INPUT_PULLUP);
     pinMode(btnResetESP32, INPUT_PULLUP);
+
+    // Configura os pinos de entrada e saida
+    setupAlarme(14, 12, 13);  // Parâmetros: buttonPin, reedSwitchPin, buzzerPin
+    setupPortao(5, 18, 19, 12, 13, 14);  // Parâmetros: in1, in2, ena, limite_aberto, limite_fechado, botao_unico
 
     pinMode(ledPin1, OUTPUT); // Configura o pino como saída
 
@@ -39,9 +46,6 @@ void setup() {
     lcd.setCursor(0, 1);
     lcd.print("Carregando...");
     delay(2000);
-
-    // Configura a rede Wi-Fi com IP estático
-    // WiFi.config(local_IP, gateway, subnet); // Define o IP estático
 
     // Verifica se há redes Wi-Fi salvas no WiFiManager
     if (hasSavedNetworks()) {
@@ -64,18 +68,13 @@ void setup() {
 
         if (WiFi.status() == WL_CONNECTED) {
             Serial.println("Conectado ao Wi-Fi! " + WiFi.SSID());
-            Serial.println("IP atribuído: " + WiFi.localIP().toString()); // Adiciona a mensagem de IP
             lcd.clear();
             lcd.setCursor(0, 0);
             lcd.print("WiFi conectado!1");
             lcd.setCursor(0, 1);
             lcd.print(WiFi.SSID());
-            delay(5000);
-            lcd.clear();
-            lcd.setCursor(0, 0);
-            lcd.print("IP atribuido: ");
-            lcd.setCursor(0, 1);
-            lcd.print(WiFi.localIP().toString());
+            delay(500);
+            configurarIPFixo();
         } else {
             Serial.println("Falha ao conectar ao Wi-Fi salvo.");
             lcd.clear();
@@ -127,6 +126,9 @@ void setup() {
 }
 
 void loop() {
+    loopAlarme();  // Controle do sistema de alarme
+    loopPortao();  // Controle do sistema de portão
+
     // Verifica continuamente se o botão foi pressionado para resetar o Wi-Fi
     if (digitalRead(btnResetWifi) == LOW) {
         Serial.println("Botão pressionado. Resetando configurações de Wi-Fi...");
@@ -179,6 +181,7 @@ void iniciarModoConfiguracaoWiFi() {
     lcd.setCursor(0, 1);
     lcd.print("de config Wi-Fi");
     delay(4000);
+
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Por favor, faca");
@@ -200,18 +203,33 @@ void iniciarModoConfiguracaoWiFi() {
         ESP.restart();
     } else {
         Serial.println("Wi-Fi Configurado com sucesso! " + WiFi.SSID());
-        Serial.println("IP atribuído: " + WiFi.localIP().toString()); // Adiciona a mensagem de IP
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print("WiFi conectado!2");
         lcd.setCursor(0, 1);
         lcd.print(WiFi.SSID());
-        delay(5000);
+        configurarIPFixo();
+    }
+}
+
+// Função para configurar o IP fixo
+void configurarIPFixo() {
+    if (!WiFi.config(local_IP, gateway, subnet)) {
+        delay(4000);
+        Serial.println("Falha ao configurar o IP estático.");
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("IP atribuído: ");
+        lcd.print("Falha ao config");
         lcd.setCursor(0, 1);
-        lcd.print(WiFi.localIP().toString());
+        lcd.print("o IP estatico");
+    } else {
+        delay(4000);
+        Serial.println("IP estático configurado: " + local_IP.toString());
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("IP atribuido:");
+        lcd.setCursor(0, 1);
+        lcd.print(local_IP.toString());
     }
 }
 
