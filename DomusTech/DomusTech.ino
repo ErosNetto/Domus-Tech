@@ -1,25 +1,51 @@
-#include <WiFi.h>
-#include <WiFiManager.h> // Biblioteca do WiFiManager
-#include <LiquidCrystal_I2C.h> // Biblioteca do LCD
-#include <ESPAsyncWebServer.h> // Biblioteca para criar um servidor
-#include <AsyncTCP.h> // Biblioteca para o AsyncWebServer
+#include <WiFi.h>                       // Biblioteca do WiFi
+#include <WiFiManager.h>                // Biblioteca do WiFiManager
+#include <LiquidCrystal_I2C.h>          // Biblioteca do LCD
+#include <ESPAsyncWebServer.h>          // Biblioteca para criar um servidor
+#include <AsyncTCP.h>                   // Biblioteca para o AsyncWebServer
 
-#include "alarme.h" // Função alarme
-#include "portao.h" // Função portao
+// Modularização
+#include "alarme.h"                     // Função alarme
+#include "portao.h"                     // Função portao
 
-LiquidCrystal_I2C lcd(0x27, 16, 2); // Configura o LCD 16x2
+// Pinos do Display I2C (SDA = 21, SCL = 22)
+// Estes pinos ficam reservados para o I2C e não devem ser alterados
+LiquidCrystal_I2C lcd(0x27, 16, 2);     // Configura o LCD 16x2 com endereço I2C 0x27
 
-const int btnResetWifi = 5; // Pino do botão (GPIO 5)
-const int btnResetESP32 = 15; // Pino do botão (GPIO 15)
-const int ledPin1 = 4; // Pino do LED
-
-WiFiManager wm; // Instância do WiFiManager
-AsyncWebServer server(80);
+WiFiManager wm;                         // Instância do WiFiManager
+AsyncWebServer server(80);                      
 
 // Configurações do IP estático
 IPAddress local_IP(192, 168, 18, 123);  // IP fixo desejado
 IPAddress gateway(192, 168, 18, 1);     // Gateway na mesma sub-rede
-IPAddress subnet(255, 255, 255, 0);    // Máscara de sub-rede padrão
+IPAddress subnet(255, 255, 255, 0);     // Máscara de sub-rede padrão
+
+// Botões de configuração da ESP
+const int btnResetWifi = 5;             // Botão de resetar o wifiManager da ESP
+const int btnResetESP32 = 15;           // Botão de resetar a ESP
+
+// Pinos do Alarme
+const int buttonPin = 14;               // Botão para ligar/desligar alarme
+const int reedSwitchPin = 27;           // Sensor magnético (reed switch)
+const int buzzerPin = 26;               // Buzzer do alarme
+
+// Pinos do Portão
+const int in1 = 32;                     // Pino IN1 da Ponte H
+const int in2 = 33;                     // Pino IN2 da Ponte H
+const int ena = 25;                     // Pino ENA da Ponte H (PWM para controle de velocidade)
+const int limite_aberto = 34;           // Fim de curso do portão aberto
+const int limite_fechado = 35;          // Fim de curso do portão fechado
+const int botao_unico = 23;             // Botão único para abrir/parar/fechar portão
+
+// Leds da casa
+const int ledPin1 = 4;                  // Pino do LED 1
+const int ledPin2 = 2;                  // Pino do LED 2
+const int ledPin3 = 12;                 // Pino do LED 3
+
+// Botões para ligar manualmente os leds
+const int btnLedPin1 = 18;              // Pino do botão para LED 1
+const int btnLedPin2 = 19;              // Pino do botão para LED 2
+const int btnLedPin3 = 13;              // Pino do botão para LED 3
 
 void setup() {
     Serial.begin(115200);
@@ -29,15 +55,28 @@ void setup() {
     pinMode(btnResetESP32, INPUT_PULLUP);
 
     // Configura os pinos de entrada e saida
-    setupAlarme(14, 12, 13);  // Parâmetros: buttonPin, reedSwitchPin, buzzerPin
-    setupPortao(5, 18, 19, 12, 13, 14);  // Parâmetros: in1, in2, ena, limite_aberto, limite_fechado, botao_unico
+    setupAlarme(buttonPin, reedSwitchPin, buzzerPin);  // Parâmetros: buttonPin, reedSwitchPin, buzzerPin
+    setupPortao(in1, in2, ena, limite_aberto, limite_fechado, botao_unico);  // Parâmetros: in1, in2, ena, limite_aberto, limite_fechado, botao_unico
 
-    pinMode(ledPin1, OUTPUT); // Configura o pino como saída
+    // Configura o pino de saida para os Leds
+    pinMode(ledPin1, OUTPUT);
+    pinMode(ledPin2, OUTPUT);
+    pinMode(ledPin3, OUTPUT);
 
+    // Configura os botões de ligação manual como entrada com pull-up interno
+    pinMode(btnLedPin1, INPUT_PULLUP);
+    pinMode(btnLedPin2, INPUT_PULLUP);
+    pinMode(btnLedPin3, INPUT_PULLUP);
+
+    // Inicialização
     digitalWrite(ledPin1, HIGH); // Liga o LED
-    delay(1000);                // Aguarda 1 segundo
+    digitalWrite(ledPin2, HIGH); // Liga o LED
+    digitalWrite(ledPin3, HIGH); // Liga o LED
+    delay(1000);
     digitalWrite(ledPin1, LOW);  // Desliga o LED
-    delay(1000);                // Aguarda 1 segundo
+    digitalWrite(ledPin2, LOW);  // Desliga o LED
+    digitalWrite(ledPin3, LOW);  // Desliga o LED
+    delay(1000);
 
     lcd.init(); // Inicializa o LCD
     lcd.backlight(); // Liga a luz de fundo do LCD

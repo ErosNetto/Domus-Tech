@@ -42,9 +42,9 @@ void loopAlarme() {
 
 void alarmeTocando() {
     tone(buzzerPin, 2000);
-    delay(300);
+    delay(200);
     noTone(buzzerPin);
-    delay(300);
+    delay(200);
 }
 
 void alarmeLigando() {
