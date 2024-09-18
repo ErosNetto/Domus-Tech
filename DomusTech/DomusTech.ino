@@ -5,8 +5,9 @@
 #include <AsyncTCP.h>                   // Biblioteca para o AsyncWebServer
 
 // Modularização
-#include "alarme.h"                     // Função alarme
-#include "portao.h"                     // Função portao
+#include "alarme.h"                     // Função do alarme
+// #include "portao.h"                     // Função do portao
+#include "portaoUsandoServo.h"          // Função do portao usando servo motor
 
 // Pinos do Display I2C (SDA = 21, SCL = 22)
 // Estes pinos ficam reservados para o I2C e não devem ser alterados
@@ -30,16 +31,20 @@ const int reedSwitchPin = 27;           // Sensor magnético (reed switch)
 const int buzzerPin = 26;               // Buzzer do alarme
 
 // Pinos do Portão
-const int in1 = 32;                     // Pino IN1 da Ponte H
-const int in2 = 33;                     // Pino IN2 da Ponte H
-const int ena = 25;                     // Pino ENA da Ponte H (PWM para controle de velocidade)
-const int limite_aberto = 34;           // Fim de curso do portão aberto
-const int limite_fechado = 35;          // Fim de curso do portão fechado
-const int botao_unico = 23;             // Botão único para abrir/parar/fechar portão
+// const int in1 = 32;                     // Pino IN1 da Ponte H
+// const int in2 = 33;                     // Pino IN2 da Ponte H
+// const int ena = 25;                     // Pino ENA da Ponte H (PWM para controle de velocidade)
+// const int limite_aberto = 34;           // Fim de curso do portão aberto
+// const int limite_fechado = 35;          // Fim de curso do portão fechado
+// const int botao_unico = 23;             // Botão único para abrir/parar/fechar portão
+
+// Pinos do Portão usando Servo Motor
+const int botaoAbreFechaPortao = 32;        // Botão único para abrir/parar/fechar portão
+const int pinoServoMotorPWM = 33;              // Fio laranja do motor
 
 // Leds da casa
 const int ledPin1 = 4;                  // Pino do LED 1
-const int ledPin2 = 2;                  // Pino do LED 2
+const int ledPin2 = 23;                 // Pino do LED 2
 const int ledPin3 = 12;                 // Pino do LED 3
 
 // Botões para ligar manualmente os leds
@@ -56,7 +61,8 @@ void setup() {
 
     // Configura os pinos de entrada e saida
     setupAlarme(buttonPin, reedSwitchPin, buzzerPin);  // Parâmetros: buttonPin, reedSwitchPin, buzzerPin
-    setupPortao(in1, in2, ena, limite_aberto, limite_fechado, botao_unico);  // Parâmetros: in1, in2, ena, limite_aberto, limite_fechado, botao_unico
+    // setupPortao(in1, in2, ena, limite_aberto, limite_fechado, botao_unico);  // Parâmetros: in1, in2, ena, limite_aberto, limite_fechado, botao_unico
+    setupPortao(botaoAbreFechaPortao, pinoServoMotorPWM);  // Parâmetros: botao_unico, pinoServo
 
     // Configura o pino de saida para os Leds
     pinMode(ledPin1, OUTPUT);
@@ -143,8 +149,8 @@ void setup() {
             int pin = request->getParam("pin")->value().toInt();
             int ledState = request->getParam("state")->value().toInt();
 
-            Serial.println("Received pin: " + String(pin));
-            Serial.println("Received state: " + String(ledState));
+            Serial.println("Recebendo o pino: " + String(pin));
+            Serial.println("Recebendo o estado: " + String(ledState));
             
             pinMode(pin, OUTPUT); // Certifica que o pino está configurado como saída
             digitalWrite(pin, ledState); // Liga ou desliga o LED
@@ -155,9 +161,64 @@ void setup() {
         }
     });
 
+    // Rota para ligar/desligar o alarme
+    server.on("/alarme", HTTP_GET, [](AsyncWebServerRequest *request){
+        if (request->hasParam("state")) {
+            int alarmState = request->getParam("state")->value().toInt();
+
+            Serial.println("Recebendo o estado do alarme: " + String(alarmState));
+            
+            if (alarmState == 1) {
+                ligaAlarme();
+            } else if (alarmState == 0) {
+                desligaAlarme();
+            }
+
+            // Ajuste: comparar com 1 (não com HIGH)
+            String state = (alarmState == 1) ? "ON" : "OFF";
+            request->send(200, "text/plain", "Alarme está " + state);
+        } else {
+            request->send(400, "text/plain", "Parâmetro 'state' ausente");
+        }
+    });
+
+    // Rota para abrir/fechar o portao
+    // server.on("/portao", HTTP_GET, [](AsyncWebServerRequest *request){
+    //     if (request->hasParam("state")) {
+    //         int gateState = request->getParam("state")->value().toInt();
+
+    //         Serial.println("Recebendo o estado do portão: " + String(gateState));
+            
+    //         if (gateState == 1) {
+    //             abrePortao();  // Função que abre o portão
+    //         } else if (gateState == 0) {
+    //             fechaPortao(); // Função que fecha o portão
+    //         }
+
+    //         String state = (gateState == 1) ? "ABERTO" : "FECHADO";
+    //         request->send(200, "text/plain", "Portão está " + state);
+    //     } else {
+    //         request->send(400, "text/plain", "Parâmetro 'state' ausente");
+    //     }
+    // });
+
+    // Rota para alternar o estado do portão
+    server.on("/portao", HTTP_GET, [](AsyncWebServerRequest *request) {
+        // A função `acionaPortao` alterna entre abrir e fechar
+        acionaPortao();
+
+        // Responder com o estado atual após a ação
+        String state = (estadoAtual == ABRINDO) ? "ABRINDO" : (estadoAtual == FECHANDO) ? "FECHANDO" : "PARADO";
+        request->send(200, "text/plain", "Portão está " + state);
+    });
+
+
     // Rota para obter o status dos LEDs
     server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request){
-        String status = "LED1: " + String(digitalRead(ledPin1));
+        String status = "LED1: " + String(digitalRead(ledPin1)) + "\n";
+        status += "LED2: " + String(digitalRead(ledPin2)) + "\n";
+        status += "LED3: " + String(digitalRead(ledPin3)) + "\n";   
+
         request->send(200, "text/plain", status);
     });
 
@@ -166,7 +227,8 @@ void setup() {
 
 void loop() {
     loopAlarme();  // Controle do sistema de alarme
-    loopPortao();  // Controle do sistema de portão
+    // loopPortao();  // Controle do sistema de portão
+    atualizarPortao(); // Controle do sisetma de portão usando o Servo Motor
 
     // Verifica continuamente se o botão foi pressionado para resetar o Wi-Fi
     if (digitalRead(btnResetWifi) == LOW) {
