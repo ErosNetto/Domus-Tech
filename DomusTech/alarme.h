@@ -6,5 +6,6 @@ void loopAlarme();
 void alarmeTocando();
 void alarmeLigando();
 void alarmeDesligando();
-
+void ligaAlarme();
+void desligaAlarme();
 #endif

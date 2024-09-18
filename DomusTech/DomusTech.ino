@@ -203,15 +203,14 @@ void setup() {
     // });
 
     // Rota para alternar o estado do portão
-    server.on("/portao", HTTP_GET, [](AsyncWebServerRequest *request) {
-        // A função `acionaPortao` alterna entre abrir e fechar
-        acionaPortao();
+    // server.on("/portao", HTTP_GET, [](AsyncWebServerRequest *request) {
+    //     // A função `acionaPortao` alterna entre abrir e fechar
+    //     acionaPortao();
 
-        // Responder com o estado atual após a ação
-        String state = (estadoAtual == ABRINDO) ? "ABRINDO" : (estadoAtual == FECHANDO) ? "FECHANDO" : "PARADO";
-        request->send(200, "text/plain", "Portão está " + state);
-    });
-
+    //     // Responder com o estado atual após a ação
+    //     String state = (estadoAtual == ABRINDO) ? "ABRINDO" : (estadoAtual == FECHANDO) ? "FECHANDO" : "PARADO";
+    //     request->send(200, "text/plain", "Portão está " + state);
+    // });
 
     // Rota para obter o status dos LEDs
     server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request){

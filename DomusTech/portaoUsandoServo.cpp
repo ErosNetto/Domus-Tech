@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <Servo.h>
+#include <ESP32Servo.h>
 #include "portaoUsandoServo.h"
 
 // Definições dos pinos e variáveis globais
@@ -47,15 +47,11 @@ void atualizarPortao() {
 void abrirPortao() {
     servoMotor.write(anguloAberto);
     Serial.println("Portão abrindo...");
-    delay(1000);  // Simulação de tempo para o portão abrir (ajustar conforme necessário)
-    pararMotor();
 }
 
 void fecharPortao() {
     servoMotor.write(anguloFechado);
     Serial.println("Portão fechando...");
-    delay(1000);  // Simulação de tempo para o portão fechar (ajustar conforme necessário)
-    pararMotor();
 }
 
 void pararMotor() {
