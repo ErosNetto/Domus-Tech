@@ -1,7 +1,7 @@
 #include "alarme.h"
 #include <Arduino.h>
 
-int buttonPin;
+int btnAcionarAlarme;
 int reedSwitchPin;
 int buzzerPin;
 bool alarmOn = false;
@@ -9,20 +9,18 @@ bool alarmOn = false;
 bool ligaDesliga = false;
 
 void setupAlarme(int bPin, int rPin, int buzzPin) {
-    buttonPin = bPin;
+    btnAcionarAlarme = bPin;
     reedSwitchPin = rPin;
     buzzerPin = buzzPin;
     
-    pinMode(buttonPin, INPUT_PULLUP);
+    pinMode(btnAcionarAlarme, INPUT_PULLUP);
     pinMode(reedSwitchPin, INPUT_PULLUP);
     pinMode(buzzerPin, OUTPUT);
-    
-    Serial.begin(115200);
 }
 
 void loopAlarme() {
     // Verifica o estado do botão
-    if (digitalRead(buttonPin) == LOW) {
+    if (digitalRead(btnAcionarAlarme) == LOW) {
         delay(200);
         alarmOn = !alarmOn;  // Alterna o estado
         if (alarmOn) {

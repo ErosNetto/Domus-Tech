@@ -6,8 +6,8 @@
 
 // Modularização
 #include "alarme.h"                     // Função do alarme
-// #include "portao.h"                     // Função do portao
-#include "portaoUsandoServo.h"          // Função do portao usando servo motor
+#include "portao.h"                     // Função do portao
+#include "config.h"                     // Configurações dos pinos de entrada e saida
 
 // Pinos do Display I2C (SDA = 21, SCL = 22)
 // Estes pinos ficam reservados para o I2C e não devem ser alterados
@@ -26,21 +26,13 @@ const int btnResetWifi = 5;             // Botão de resetar o wifiManager da ES
 const int btnResetESP32 = 15;           // Botão de resetar a ESP
 
 // Pinos do Alarme
-const int buttonPin = 14;               // Botão para ligar/desligar alarme
+const int btnAcionarAlarme = 14;        // Botão para ligar/desligar alarme
 const int reedSwitchPin = 27;           // Sensor magnético (reed switch)
 const int buzzerPin = 26;               // Buzzer do alarme
 
-// Pinos do Portão
-// const int in1 = 32;                     // Pino IN1 da Ponte H
-// const int in2 = 33;                     // Pino IN2 da Ponte H
-// const int ena = 25;                     // Pino ENA da Ponte H (PWM para controle de velocidade)
-// const int limite_aberto = 34;           // Fim de curso do portão aberto
-// const int limite_fechado = 35;          // Fim de curso do portão fechado
-// const int botao_unico = 23;             // Botão único para abrir/parar/fechar portão
-
 // Pinos do Portão usando Servo Motor
-const int botaoAbreFechaPortao = 32;        // Botão único para abrir/parar/fechar portão
-const int pinoServoMotorPWM = 33;              // Fio laranja do motor
+const int botaoAbreFechaPortao = 32;     // Botão único para abrir/fechar portão
+const int pinoServoPWM = 33;             // Fio laranja do motor
 
 // Leds da casa
 const int ledPin1 = 4;                  // Pino do LED 1
@@ -55,14 +47,13 @@ const int btnLedPin3 = 13;              // Pino do botão para LED 3
 void setup() {
     Serial.begin(115200);
 
-    // Configura o pino do botão como entrada com pull-up interno
+    // Configura os pinos dos botões pra ESP como entrada e com pull-up interno
     pinMode(btnResetWifi, INPUT_PULLUP);
     pinMode(btnResetESP32, INPUT_PULLUP);
 
     // Configura os pinos de entrada e saida
-    setupAlarme(buttonPin, reedSwitchPin, buzzerPin);  // Parâmetros: buttonPin, reedSwitchPin, buzzerPin
-    // setupPortao(in1, in2, ena, limite_aberto, limite_fechado, botao_unico);  // Parâmetros: in1, in2, ena, limite_aberto, limite_fechado, botao_unico
-    setupPortao(botaoAbreFechaPortao, pinoServoMotorPWM);  // Parâmetros: botao_unico, pinoServo
+    setupAlarme(btnAcionarAlarme, reedSwitchPin, buzzerPin);    // Parâmetros: btnAcionarAlarme, reedSwitchPin, buzzerPin
+    setupPortao(botaoAbreFechaPortao, pinoServoPWM);            // Parâmetros: botao_unico, pinoServo
 
     // Configura o pino de saida para os Leds
     pinMode(ledPin1, OUTPUT);
@@ -75,22 +66,22 @@ void setup() {
     pinMode(btnLedPin3, INPUT_PULLUP);
 
     // Inicialização
-    digitalWrite(ledPin1, HIGH); // Liga o LED
-    digitalWrite(ledPin2, HIGH); // Liga o LED
-    digitalWrite(ledPin3, HIGH); // Liga o LED
-    delay(1000);
-    digitalWrite(ledPin1, LOW);  // Desliga o LED
-    digitalWrite(ledPin2, LOW);  // Desliga o LED
-    digitalWrite(ledPin3, LOW);  // Desliga o LED
-    delay(1000);
-
-    lcd.init(); // Inicializa o LCD
-    lcd.backlight(); // Liga a luz de fundo do LCD
+    lcd.init();                     // Inicializa o LCD
+    lcd.backlight();                // Liga a luz de fundo do LCD
     lcd.setCursor(0, 0);
     lcd.print("   Domus Tech   ");
     lcd.setCursor(0, 1);
     lcd.print("Carregando...");
-    delay(2000);
+    delay(500);
+
+    digitalWrite(ledPin1, HIGH);    // Liga o LED
+    digitalWrite(ledPin2, HIGH);    // Liga o LED
+    digitalWrite(ledPin3, HIGH);    // Liga o LED
+    delay(1000);
+    digitalWrite(ledPin1, LOW);     // Desliga o LED
+    digitalWrite(ledPin2, LOW);     // Desliga o LED
+    digitalWrite(ledPin3, LOW);     // Desliga o LED
+    delay(500);
 
     // Verifica se há redes Wi-Fi salvas no WiFiManager
     if (hasSavedNetworks()) {
@@ -142,7 +133,6 @@ void setup() {
         iniciarModoConfiguracaoWiFi();
     }
 
-    // TESTE
     // Rota para controlar LEDs
     server.on("/led", HTTP_GET, [](AsyncWebServerRequest *request){
         if (request->hasParam("pin") && request->hasParam("state")) {
@@ -174,7 +164,6 @@ void setup() {
                 desligaAlarme();
             }
 
-            // Ajuste: comparar com 1 (não com HIGH)
             String state = (alarmState == 1) ? "ON" : "OFF";
             request->send(200, "text/plain", "Alarme está " + state);
         } else {
@@ -226,8 +215,7 @@ void setup() {
 
 void loop() {
     loopAlarme();  // Controle do sistema de alarme
-    // loopPortao();  // Controle do sistema de portão
-    atualizarPortao(); // Controle do sisetma de portão usando o Servo Motor
+    loopPortao();  // Controle do sisetma de portão 
 
     // Verifica continuamente se o botão foi pressionado para resetar o Wi-Fi
     if (digitalRead(btnResetWifi) == LOW) {
@@ -237,7 +225,7 @@ void loop() {
         lcd.print("Resetando Wi-Fi");
         lcd.setCursor(0, 1);
         lcd.print("Reiniciando...");
-        wm.resetSettings(); // Reseta as configurações de Wi-Fi salvas
+        wm.resetSettings();
         delay(3000);        
         ESP.restart();
     }
@@ -261,7 +249,6 @@ void loop() {
 bool hasSavedNetworks() {
     WiFi.mode(WIFI_STA); // Garante que estamos no modo estação
     WiFi.begin();        // Inicia o WiFi com credenciais salvas, se houver
-
     delay(500);
         
     // Verifica se temos um SSID salvo
@@ -334,27 +321,27 @@ void configurarIPFixo() {
 }
 
 // Função para rolar o nome do SSID no display
-void scrollSSID(String ssid) {
-    int len = ssid.length();
-    // Se o SSID couber na tela, exibe diretamente
-    if (len <= 16) {
-        lcd.setCursor(0, 1);
-        lcd.print(ssid);
-    } else {
-        // Exibe o SSID parado por 3 segundos antes de iniciar a rolagem
-        lcd.setCursor(0, 1);
-        lcd.print(ssid.substring(0, 16));
-        delay(3000);
+// void scrollSSID(String ssid) {
+//     int len = ssid.length();
+//     // Se o SSID couber na tela, exibe diretamente
+//     if (len <= 16) {
+//         lcd.setCursor(0, 1);
+//         lcd.print(ssid);
+//     } else {
+//         // Exibe o SSID parado por 3 segundos antes de iniciar a rolagem
+//         lcd.setCursor(0, 1);
+//         lcd.print(ssid.substring(0, 16));
+//         delay(3000);
         
-        ssid += "   ";
-        for (int start = 0; start < len + 3; start++) {
-            String scrollText = ssid.substring(start);
-            if (scrollText.length() < 16) {
-                scrollText += ssid.substring(0, 16 - scrollText.length());
-            }
-            lcd.setCursor(0, 1);
-            lcd.print(scrollText);
-            delay(300);
-        }
-    }
-}
+//         ssid += "   ";
+//         for (int start = 0; start < len + 3; start++) {
+//             String scrollText = ssid.substring(start);
+//             if (scrollText.length() < 16) {
+//                 scrollText += ssid.substring(0, 16 - scrollText.length());
+//             }
+//             lcd.setCursor(0, 1);
+//             lcd.print(scrollText);
+//             delay(300);
+//         }
+//     }
+// }

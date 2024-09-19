@@ -1,48 +1,39 @@
-#include "portao.h"
 #include <Arduino.h>
+#include <ESP32Servo.h>
+#include "portao.h"
 
-int in1, in2, ena, limite_aberto, limite_fechado, botao_unico;
-enum EstadoPortao { PARADO, ABRINDO, FECHANDO };
-EstadoPortao estadoAtual = PARADO;
-EstadoPortao ultimoEstado = PARADO;
+// Definições dos pinos e variáveis globais
+int botao_unico;
+int pinoServo;
+Servo servoMotor;
+const int anguloAberto = 180;
+const int anguloFechado = 0;
+enum EstadoPortao { PARADO, ABRINDO, FECHANDO } estadoAtual = PARADO;
+enum EstadoPortao ultimoEstado = PARADO;
 
-void setupPortao(int in1Pin, int in2Pin, int enaPin, int limiteAbertoPin, int limiteFechadoPin, int botaoUnicoPin) {
-    in1 = in1Pin;
-    in2 = in2Pin;
-    ena = enaPin;
-    limite_aberto = limiteAbertoPin;
-    limite_fechado = limiteFechadoPin;
-    botao_unico = botaoUnicoPin;
-
-    pinMode(in1, OUTPUT);
-    pinMode(in2, OUTPUT);
-    pinMode(ena, OUTPUT);
-    pinMode(limite_aberto, INPUT_PULLUP);
-    pinMode(limite_fechado, INPUT_PULLUP);
-    pinMode(botao_unico, INPUT_PULLUP);
+// Função para configurar o portão
+void setupPortao(int pinoBotao, int pinoServo) {
+    botao_unico = pinoBotao;
+    ::pinoServo = pinoServo;
     
+    pinMode(botao_unico, INPUT_PULLUP);
+    servoMotor.attach(pinoServo);
     pararMotor();
-    Serial.begin(115200);
 }
 
+// Função para atualizar o estado do portão
 void loopPortao() {
     if (digitalRead(botao_unico) == LOW) {
-        delay(200);  // Debounce
+        delay(200);  // Debounce para evitar leituras múltiplas rápidas
+        
         if (estadoAtual == PARADO) {
-            if (digitalRead(limite_fechado) == LOW) {
+            // Alterna entre abrir e fechar o portão
+            if (ultimoEstado == FECHANDO || ultimoEstado == PARADO) {
                 abrirPortao();
                 estadoAtual = ABRINDO;
-            } else if (digitalRead(limite_aberto) == LOW) {
+            } else if (ultimoEstado == ABRINDO) {
                 fecharPortao();
                 estadoAtual = FECHANDO;
-            } else {
-                if (ultimoEstado == ABRINDO) {
-                    fecharPortao();
-                    estadoAtual = FECHANDO;
-                } else {
-                    abrirPortao();
-                    estadoAtual = ABRINDO;
-                }
             }
         } else {
             pararMotor();
@@ -50,37 +41,36 @@ void loopPortao() {
             estadoAtual = PARADO;
         }
     }
-    
-    verificarLimites();
-}
-
-void verificarLimites() {
-    if (estadoAtual == ABRINDO && digitalRead(limite_aberto) == LOW) {
-        pararMotor();
-        estadoAtual = PARADO;
-    } else if (estadoAtual == FECHANDO && digitalRead(limite_fechado) == LOW) {
-        pararMotor();
-        estadoAtual = PARADO;
-    }
 }
 
 void abrirPortao() {
-    digitalWrite(in1, HIGH);
-    digitalWrite(in2, LOW);
-    analogWrite(ena, 80);
-    Serial.println("Portão abrindo...\n");
+    servoMotor.write(anguloAberto);
+    Serial.println("Portão abrindo...");
 }
 
 void fecharPortao() {
-    digitalWrite(in1, LOW);
-    digitalWrite(in2, HIGH);
-    analogWrite(ena, 80);
-    Serial.println("Portão fechando...\n");
+    servoMotor.write(anguloFechado);
+    Serial.println("Portão fechando...");
 }
 
 void pararMotor() {
-    digitalWrite(in1, LOW);
-    digitalWrite(in2, LOW);
-    analogWrite(ena, 0);
-    Serial.println("Motor parado.\n");
+    Serial.println("Motor parado.");
+}
+
+// TESTE
+// Função para acionar o portão externamente (exemplo)
+void acionaPortao() {
+    if (estadoAtual == PARADO) {
+        if (ultimoEstado == FECHANDO || ultimoEstado == PARADO) {
+            abrirPortao();
+            estadoAtual = ABRINDO;
+        } else if (ultimoEstado == ABRINDO) {
+            fecharPortao();
+            estadoAtual = FECHANDO;
+        }
+    } else {
+        pararMotor();
+        ultimoEstado = estadoAtual;
+        estadoAtual = PARADO;
+    }
 }
