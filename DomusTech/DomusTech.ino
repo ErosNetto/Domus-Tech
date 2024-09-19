@@ -5,13 +5,12 @@
 #include <AsyncTCP.h>                   // Biblioteca para o AsyncWebServer
 
 // Modularização
+#include "wifi_config.h"                // Configurações do Wi-Fi
+#include "pinos.h"                      // Configurações dos pinos de entrada e saida
 #include "alarme.h"                     // Função do alarme
 #include "portao.h"                     // Função do portao
-#include "pinos.h"                      // Configurações dos pinos de entrada e saida
-#include "wifi_config.h"                // Configurações do Wi-Fi
 
 // Pinos do Display I2C (SDA = 21, SCL = 22)
-// Estes pinos ficam reservados para o I2C e não devem ser alterados
 LiquidCrystal_I2C lcd(0x27, 16, 2);     // Configura o LCD 16x2 com endereço I2C 0x27
 
 WiFiManager wm;                         // Instância do WiFiManager
@@ -41,10 +40,7 @@ void setup() {
     // Inicialização
     lcd.init();                     // Inicializa o LCD
     lcd.backlight();                // Liga a luz de fundo do LCD
-    lcd.setCursor(0, 0);
-    lcd.print("   Domus Tech   ");
-    lcd.setCursor(0, 1);
-    lcd.print("Carregando...");
+    mostrarNoLCD("   Domus Tech   ", "Carregando...");
     delay(500);
 
     digitalWrite(ledPin1, HIGH);    // Liga o LED
@@ -56,7 +52,9 @@ void setup() {
     digitalWrite(ledPin3, LOW);     // Desliga o LED
     delay(500);
 
+    // Inicia as configurações do Wi-Fi
     configurarWiFi();
+    delay(500);
 
     // Rota para controlar LEDs
     server.on("/led", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -145,11 +143,7 @@ void loop() {
     // Verifica continuamente se o botão foi pressionado para resetar o Wi-Fi
     if (digitalRead(btnResetWifi) == LOW) {
         Serial.println("Botão pressionado. Resetando configurações de Wi-Fi...");
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Resetando Wi-Fi");
-        lcd.setCursor(0, 1);
-        lcd.print("Reiniciando...");
+        mostrarNoLCD("Resetando Wi-Fi", "Reiniciando...");
         wm.resetSettings();
         delay(3000);        
         ESP.restart();
@@ -158,10 +152,16 @@ void loop() {
     // Reinicia a ESP32
     if (digitalRead(btnResetESP32) == LOW) {
         Serial.println("Botão pressionado. Reiniciando...");
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Reiniciando...");
+        mostrarNoLCD("Reiniciando...");
         delay(3000);        
         ESP.restart();
     }
+}
+
+void mostrarNoLCD(const String& primeiraLinha = "", const String& segundaLinha = "") {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(primeiraLinha);
+    lcd.setCursor(0, 1);
+    lcd.print(segundaLinha);
 }
