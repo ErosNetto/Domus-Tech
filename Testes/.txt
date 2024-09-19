@@ -1,0 +1,29 @@
+// if (WiFi.status() == WL_CONNECTED) {
+//     scrollSSID(WiFi.SSID());
+// }
+
+// Função para rolar o nome do SSID no display
+// void scrollSSID(String ssid) {
+//     int len = ssid.length();
+//     // Se o SSID couber na tela, exibe diretamente
+//     if (len <= 16) {
+//         lcd.setCursor(0, 1);
+//         lcd.print(ssid);
+//     } else {
+//         // Exibe o SSID parado por 3 segundos antes de iniciar a rolagem
+//         lcd.setCursor(0, 1);
+//         lcd.print(ssid.substring(0, 16));
+//         delay(3000);
+        
+//         ssid += "   ";
+//         for (int start = 0; start < len + 3; start++) {
+//             String scrollText = ssid.substring(start);
+//             if (scrollText.length() < 16) {
+//                 scrollText += ssid.substring(0, 16 - scrollText.length());
+//             }
+//             lcd.setCursor(0, 1);
+//             lcd.print(scrollText);
+//             delay(300);
+//         }
+//     }
+// }
