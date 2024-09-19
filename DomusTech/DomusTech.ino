@@ -158,7 +158,7 @@ void loop() {
     }
 }
 
-void mostrarNoLCD(const String& primeiraLinha = "", const String& segundaLinha = "") {
+void mostrarNoLCD(const String& primeiraLinha, const String& segundaLinha) {
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print(primeiraLinha);

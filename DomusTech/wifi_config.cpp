@@ -1,7 +1,7 @@
 #include "wifi_config.h"
 
 // Definições das variáveis globais
-WiFiManager wm; // Inicialize o WiFiManager
+extern WiFiManager wm; // Inicialize o WiFiManager
 
 // Configurações do IP estático
 IPAddress local_IP(192, 168, 18, 123);  // IP fixo
@@ -29,7 +29,7 @@ void configurarWiFi() {
 
         if (WiFi.status() == WL_CONNECTED) {
             Serial.println("Conectado ao Wi-Fi! " + WiFi.SSID());
-            mostrarNoLCD("WiFi conectado!", WiFi.SSID().toString());
+            mostrarNoLCD("WiFi conectado!", WiFi.SSID());
             delay(3000);
             ipTexto();
         } else {
@@ -73,7 +73,7 @@ void iniciarModoConfiguracaoWiFi() {
         ESP.restart();
     } else {
         Serial.println("Wi-Fi Configurado com sucesso! " + WiFi.SSID());
-        mostrarNoLCD("WiFi conectado!", WiFi.SSID().toString());
+        mostrarNoLCD("WiFi conectado!", WiFi.SSID());
         delay(3000);
         configurarIPFixo();
         delay(500);

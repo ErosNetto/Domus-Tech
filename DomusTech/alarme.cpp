@@ -1,5 +1,5 @@
-#include "alarme.h"
 #include <Arduino.h>
+#include "alarme.h"
 
 int btnAcionarAlarme;
 int reedSwitchPin;

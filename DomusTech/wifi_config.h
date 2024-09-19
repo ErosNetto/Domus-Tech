@@ -12,7 +12,7 @@ void configurarIPFixo();
 void ipTexto();
 
 // Declaração da função externa para mostrar no LCD
-extern void mostrarNoLCD(const String& primeiraLinha, const String& segundaLinha);
+extern void mostrarNoLCD(const String& primeiraLinha = "", const String& segundaLinha = "");
 
 // Declarações de variáveis globais externas
 extern WiFiManager wm;
