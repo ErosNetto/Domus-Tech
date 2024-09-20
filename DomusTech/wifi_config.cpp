@@ -49,6 +49,7 @@ void configurarWiFi() {
 // Função para verificar se há redes Wi-Fi salvas no WiFiManager
 bool hasSavedNetworks() {
     WiFi.mode(WIFI_STA); // Garante que estamos no modo estação
+    WiFi.begin();        // Inicia o WiFi com credenciais salvas, se houver
     delay(200);
 
     // Verifica se temos um SSID salvo

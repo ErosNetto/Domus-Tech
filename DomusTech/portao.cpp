@@ -6,71 +6,47 @@
 int botao_unico;
 int pinoServo;
 Servo servoMotor;
-const int anguloAberto = 180;
-const int anguloFechado = 0;
-enum EstadoPortao { PARADO, ABRINDO, FECHANDO } estadoAtual = PARADO;
-enum EstadoPortao ultimoEstado = PARADO;
+const int anguloAberto = 85;  // Ângulo para abrir o portão
+const int anguloFechado = 0;   // Ângulo para fechar o portão
+bool portaoAberto = false;      // Estado inicial do portão (fechado)
 
-// Função para configurar o portão
 void setupPortao(int pinoBotao, int pinoServo) {
     botao_unico = pinoBotao;
     ::pinoServo = pinoServo;
     
     pinMode(botao_unico, INPUT_PULLUP);
     servoMotor.attach(pinoServo);
-    pararMotor();
+    
+    // Inicializa o portão como fechado
+    fecharPortao();
 }
 
-// Função para atualizar o estado do portão
 void loopPortao() {
     if (digitalRead(botao_unico) == LOW) {
         delay(200);  // Debounce para evitar leituras múltiplas rápidas
         
-        if (estadoAtual == PARADO) {
-            // Alterna entre abrir e fechar o portão
-            if (ultimoEstado == FECHANDO || ultimoEstado == PARADO) {
-                abrirPortao();
-                estadoAtual = ABRINDO;
-            } else if (ultimoEstado == ABRINDO) {
-                fecharPortao();
-                estadoAtual = FECHANDO;
-            }
+        // Alterna entre abrir e fechar o portão
+        if (portaoAberto) {
+            fecharPortao();
         } else {
-            pararMotor();
-            ultimoEstado = estadoAtual;
-            estadoAtual = PARADO;
+            abrirPortao();
+        }
+
+        // Aguarda até o botão ser solto antes de continuar
+        while (digitalRead(botao_unico) == LOW) {
+            delay(10);  // Espera o botão ser solto
         }
     }
 }
 
 void abrirPortao() {
-    servoMotor.write(anguloAberto);
+    servoMotor.write(anguloAberto);  // Move o servo para o ângulo de abertura
+    portaoAberto = true;              // Atualiza o estado para aberto
     Serial.println("Portão abrindo...");
 }
 
 void fecharPortao() {
-    servoMotor.write(anguloFechado);
+    servoMotor.write(anguloFechado);  // Move o servo para o ângulo de fechamento
+    portaoAberto = false;             // Atualiza o estado para fechado
     Serial.println("Portão fechando...");
-}
-
-void pararMotor() {
-    Serial.println("Motor parado.");
-}
-
-// TESTE
-// Função para acionar o portão externamente (exemplo)
-void acionaPortao() {
-    if (estadoAtual == PARADO) {
-        if (ultimoEstado == FECHANDO || ultimoEstado == PARADO) {
-            abrirPortao();
-            estadoAtual = ABRINDO;
-        } else if (ultimoEstado == ABRINDO) {
-            fecharPortao();
-            estadoAtual = FECHANDO;
-        }
-    } else {
-        pararMotor();
-        ultimoEstado = estadoAtual;
-        estadoAtual = PARADO;
-    }
 }

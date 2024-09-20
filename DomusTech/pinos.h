@@ -11,7 +11,7 @@ const int reedSwitchPin = 27;             // Sensor magnético (reed switch)
 const int buzzerPin = 26;                 // Buzzer do alarme
 
 // Pinos do Portão usando Servo Motor
-const int botaoAbreFechaPortao = 32;      // Botão único para abrir/fechar portão
+const int botaoAbreFechaPortao = 25;      // Botão único para abrir/fechar portão
 const int pinoServoPWM = 33;              // Fio laranja do motor
 
 // Leds da casa
