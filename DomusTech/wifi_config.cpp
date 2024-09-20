@@ -4,7 +4,7 @@
 extern WiFiManager wm; // Inicialize o WiFiManager
 
 // Configurações do IP estático
-IPAddress local_IP(192, 168, 18, 123);  // IP fixo
+IPAddress local_IP(192, 168, 18, 65);  // IP fixo
 IPAddress gateway(192, 168, 18, 1);     // Gateway na mesma sub-rede
 IPAddress subnet(255, 255, 255, 0);     // Máscara de sub-rede padrão
 

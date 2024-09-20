@@ -6,6 +6,11 @@ void loopAlarme();
 void alarmeTocando();
 void alarmeLigando();
 void alarmeDesligando();
-void ligaAlarme();
-void desligaAlarme();
+
+// Declaração da variável externa alarmOn
+extern bool alarmOn;
+
+// Declaração da função externa para mostrar no LCD
+extern void mostrarNoLCD(const String& primeiraLinha, const String& segundaLinha);
+
 #endif

@@ -9,6 +9,5 @@ void loopPortao();
 void abrirPortao();
 void fecharPortao();
 void pararMotor();
-void acionaPortao();
 
 #endif

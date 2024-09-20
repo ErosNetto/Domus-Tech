@@ -5,8 +5,6 @@ int btnAcionarAlarme;
 int reedSwitchPin;
 int buzzerPin;
 bool alarmOn = false;
-// teste
-bool ligaDesliga = false;
 
 void setupAlarme(int bPin, int rPin, int buzzPin) {
     btnAcionarAlarme = bPin;
@@ -20,7 +18,7 @@ void setupAlarme(int bPin, int rPin, int buzzPin) {
 
 // Função para atualizar o estado do alarme
 void loopAlarme() {
-    if (digitalRead(btnAcionarAlarme) == LOW || ligaDesliga == true) {
+    if (digitalRead(btnAcionarAlarme) == LOW) {
         delay(200);
 
         alarmOn = !alarmOn;  // Alterna o estado
@@ -34,39 +32,15 @@ void loopAlarme() {
         delay(500);
     }
 
-    // Verifica se o alarme foi ligado/desligado externamente (ligaDesliga)
-    // if (ligaDesliga) {
-    //     if (!alarmOn) {
-    //         alarmOn = true;
-    //         Serial.println("Sistema armado externamente.");
-    //         alarmeLigando();
-    //     }
-    // } else {
-    //     if (alarmOn) {
-    //         alarmOn = false;
-    //         Serial.println("Sistema desarmado externamente.");
-    //         alarmeDesligando();
-    //     }
-    // }
-
     // Verifica o estado do sensor Reed Switch
     if (alarmOn && digitalRead(reedSwitchPin) == HIGH) {
         Serial.println("Intrusão detectada! Alarme ativado.");
+        mostrarNoLCD("--- ATENCAO! ---", "Alarme dispadado");
         alarmeTocando();
     } else {
         noTone(buzzerPin);  // Desativa o som quando não há intrusão
     }
 }
-
-// teste
-void ligaAlarme() {
-    ligaDesliga = true;
-}
-
-void desligaAlarme() {
-    ligaDesliga = false;
-}
-
 
 void alarmeTocando() {
     tone(buzzerPin, 1500);
@@ -76,12 +50,14 @@ void alarmeTocando() {
 }
 
 void alarmeLigando() {
+    mostrarNoLCD("Alarme ligado", "Pelo btn interno");
     tone(buzzerPin, 1500);
     delay(300);
     noTone(buzzerPin);
 }
 
 void alarmeDesligando() {
+    mostrarNoLCD("Alarme desligado", "Pelo btn interno");
     tone(buzzerPin, 1500);
     delay(150);
     noTone(buzzerPin);

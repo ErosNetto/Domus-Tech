@@ -1,57 +1,25 @@
-#include <Servo.h>
+#include <Arduino.h>
+#include <ESP32Servo.h>
 
 Servo servoMotor;
 
-// Definições dos pinos
-const int botao_unico = 4; // Pino do botão
-const int anguloAberto = 180; // Ângulo para portão aberto
-const int anguloFechado = 0; // Ângulo para portão fechado
-
-enum EstadoPortao { PARADO, ABRINDO, FECHANDO };
-EstadoPortao estadoAtual = PARADO;
-EstadoPortao ultimoEstado = PARADO;
+const int pinoServo = 33;  // Pino do transistor
+const int pinoControle = 32; // Pino de controle do ESP32
 
 void setup() {
-    pinMode(botao_unico, INPUT_PULLUP);
-    
-    servoMotor.attach(13); // Pino de controle do servo motor (ajuste conforme necessário)
-    
-    pararMotor();
+    pinMode(pinoControle, OUTPUT);
+    servoMotor.attach(pinoServo);
     Serial.begin(115200);
+    
+    
 }
 
 void loop() {
-    if (digitalRead(botao_unico) == LOW) {
-        delay(200);  // Debounce
-        
-        if (estadoAtual == PARADO) {
-            // Alterna entre abrir e fechar o portão
-            if (ultimoEstado == FECHANDO || ultimoEstado == PARADO) {
-                abrirPortao();
-                estadoAtual = ABRINDO;
-            } else if (ultimoEstado == ABRINDO) {
-                fecharPortao();
-                estadoAtual = FECHANDO;
-            }
-        } else {
-            pararMotor();
-            ultimoEstado = estadoAtual;
-            estadoAtual = PARADO;
-        }
-    }
-}
-
-void abrirPortao() {
-    servoMotor.write(anguloAberto);
-    Serial.println("Portão abrindo...");
-}
-
-void fecharPortao() {
-    servoMotor.write(anguloFechado);
-    Serial.println("Portão fechando...");
-}
-
-void pararMotor() {
-    // O servo motor mantém a posição quando o sinal PWM é constante.
-    Serial.println("Motor parado.");
+    digitalWrite(pinoControle, HIGH); // Ativa o TIP122
+    delay(1000); // Espera 1 segundo
+    servoMotor.write(0); // Fechar
+    delay(1000); // Espera 1 segundo
+    servoMotor.write(85); // Abrir
+    delay(1000); // Espera 1 segundo
+    digitalWrite(pinoControle, LOW); // Desativa o TIP122
 }

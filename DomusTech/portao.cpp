@@ -14,7 +14,7 @@ void setupPortao(int pinoBotao, int pinoServo) {
     botao_unico = pinoBotao;
     ::pinoServo = pinoServo;
     
-    pinMode(botao_unico, INPUT_PULLUP);
+    pinMode(botao_unico, INPUT_PULLUP); 
     servoMotor.attach(pinoServo);
     
     // Inicializa o portão como fechado

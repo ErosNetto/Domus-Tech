@@ -10,6 +10,9 @@
 #include "alarme.h"                     // Função do alarme
 #include "portao.h"                     // Função do portao
 
+extern void alarmeLigando();
+extern void alarmeDesligando();
+
 // Pinos do Display I2C (SDA = 21, SCL = 22)
 LiquidCrystal_I2C lcd(0x27, 16, 2);     // Configura o LCD 16x2 com endereço I2C 0x27
 
@@ -74,61 +77,36 @@ void setup() {
         }
     });
 
-    // Rota para ligar/desligar o alarme
-    server.on("/alarme", HTTP_GET, [](AsyncWebServerRequest *request){
+    server.on("/alarme", HTTP_GET, [&alarmOn](AsyncWebServerRequest *request) {
         if (request->hasParam("state")) {
             int alarmState = request->getParam("state")->value().toInt();
 
             Serial.println("Recebendo o estado do alarme: " + String(alarmState));
-            
+
+            // Ativa ou desativa o alarme
             if (alarmState == 1) {
-                ligaAlarme();
+                alarmOn = true;  // Liga o alarme
+                Serial.println("Alarme ativado remotamente.");
+                alarmeLigando();
             } else if (alarmState == 0) {
-                desligaAlarme();
+                alarmOn = false; // Desliga o alarme
+                Serial.println("Alarme desativado remotamente.");
+                alarmeDesligando();
             }
 
-            String state = (alarmState == 1) ? "ON" : "OFF";
+            String state = (alarmOn) ? "ON" : "OFF";
             request->send(200, "text/plain", "Alarme está " + state);
         } else {
             request->send(400, "text/plain", "Parâmetro 'state' ausente");
         }
     });
 
-    // Rota para abrir/fechar o portao
-    // server.on("/portao", HTTP_GET, [](AsyncWebServerRequest *request){
-    //     if (request->hasParam("state")) {
-    //         int gateState = request->getParam("state")->value().toInt();
-
-    //         Serial.println("Recebendo o estado do portão: " + String(gateState));
-            
-    //         if (gateState == 1) {
-    //             abrePortao();  // Função que abre o portão
-    //         } else if (gateState == 0) {
-    //             fechaPortao(); // Função que fecha o portão
-    //         }
-
-    //         String state = (gateState == 1) ? "ABERTO" : "FECHADO";
-    //         request->send(200, "text/plain", "Portão está " + state);
-    //     } else {
-    //         request->send(400, "text/plain", "Parâmetro 'state' ausente");
-    //     }
-    // });
-
-    // Rota para alternar o estado do portão
-    // server.on("/portao", HTTP_GET, [](AsyncWebServerRequest *request) {
-    //     // A função `acionaPortao` alterna entre abrir e fechar
-    //     acionaPortao();
-
-    //     // Responder com o estado atual após a ação
-    //     String state = (estadoAtual == ABRINDO) ? "ABRINDO" : (estadoAtual == FECHANDO) ? "FECHANDO" : "PARADO";
-    //     request->send(200, "text/plain", "Portão está " + state);
-    // });
-
-    // Rota para obter o status dos LEDs
+    // Rota para obter o status dos dispositivos
     server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request){
         String status = "LED1: " + String(digitalRead(ledPin1)) + "\n";
         status += "LED2: " + String(digitalRead(ledPin2)) + "\n";
         status += "LED3: " + String(digitalRead(ledPin3)) + "\n";   
+        status += (alarmOn) ? "Alarme está ligado" : "Alarme está desligado";
 
         request->send(200, "text/plain", status);
     });
