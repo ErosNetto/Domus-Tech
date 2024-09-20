@@ -5,7 +5,7 @@
 #include <AsyncTCP.h>                     // Biblioteca para o AsyncWebServer
 #include <ESP32Servo.h>                   // Biblioteca para o Servo Motor
 
-// ----- CONEXÇÃO DOS PINOS DA ESP ----- //
+// ----- CONEXÃO DOS PINOS DA ESP ----- //
 // Botões de configuração da ESP
 const int btnResetWifi = 5;               // Botão de resetar o wifiManager da ESP
 const int btnResetESP32 = 15;             // Botão de resetar a ESP
@@ -16,8 +16,8 @@ const int reedSwitchPin = 27;             // Sensor magnético (reed switch)
 const int buzzerPin = 26;                 // Buzzer do alarme
 
 // Pinos do Portão usando Servo Motor
-const int bTNAbreFechaPortao = 25;      // Botão único para abrir/fechar portão
-const int pinServoMotor = 33;              // Fio laranja do motor
+const int btnAbreFechaPortao = 25;        // Botão único para abrir/fechar portão
+const int pinServoMotor = 33;             // Fio laranja do motor
 
 // Leds da casa
 const int ledPin1 = 4;                    // Pino do LED 1
@@ -40,6 +40,10 @@ IPAddress subnet(255, 255, 255, 0);       // Máscara de sub-rede padrão
 WiFiManager wm;                           // Instância do WiFiManager
 AsyncWebServer server(80);
 
+// Variáveis globais
+bool alarmeAtivo = false;                 // Variável para controlar se o alarme está ligado ou desligado
+bool ledState[] = {0, 0, 0};
+
 // Função para escrever no LCD I2C
 void mostrarNoLCD(const String& primeiraLinha, const String& segundaLinha) {
     lcd.clear();
@@ -59,16 +63,7 @@ void setup() {
     // Configura os pinos de entrada e saida
     setupAlarme();
     setupPortao();
-
-    // Configura o pino de saida para os Leds
-    pinMode(ledPin1, OUTPUT);
-    pinMode(ledPin2, OUTPUT);
-    pinMode(ledPin3, OUTPUT);
-
-    // Configura os botões de ligação manual como entrada com pull-up interno
-    pinMode(btnLedPin1, INPUT_PULLUP);
-    pinMode(btnLedPin2, INPUT_PULLUP);
-    pinMode(btnLedPin3, INPUT_PULLUP);
+    setupLeds();
 
     // Inicialização
     lcd.init();                     // Inicializa o LCD
@@ -76,57 +71,63 @@ void setup() {
     mostrarNoLCD("   Domus Tech   ", "Carregando...");
     delay(500);
 
-    digitalWrite(ledPin1, HIGH);    // Liga o LED
-    digitalWrite(ledPin2, HIGH);    // Liga o LED
-    digitalWrite(ledPin3, HIGH);    // Liga o LED
-    delay(1000);
-    digitalWrite(ledPin1, LOW);     // Desliga o LED
-    digitalWrite(ledPin2, LOW);     // Desliga o LED
-    digitalWrite(ledPin3, LOW);     // Desliga o LED
-    delay(500);
-
     // Inicia as configurações do Wi-Fi
     configurarWiFi();
     delay(500);
 
-    // Rota para controlar LEDs
-    server.on("/led", HTTP_GET, [](AsyncWebServerRequest *request){
-        if (request->hasParam("pin") && request->hasParam("state")) {
-            int pin = request->getParam("pin")->value().toInt();
-            int ledState = request->getParam("state")->value().toInt();
+    // Rota para controlar LEDs via requisição HTTP
+    server.on("/led", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (request->hasParam("ledNum") && request->hasParam("state")) {
+            int ledNumero = request->getParam("ledNum")->value().toInt();
+            int ledStateRequest = request->getParam("state")->value().toInt();
+            int pin;
 
-            Serial.println("Recebendo o pino: " + String(pin));
-            Serial.println("Recebendo o estado: " + String(ledState));
+            if (ledNumero == 1) {
+                pin = ledPin1;
+            } else if (ledNumero == 2) {
+                pin = ledPin2;
+            } else if (ledNumero == 3) {
+                pin = ledPin3;
+            } else {
+                request->send(400, "text/plain", "Número do LED invalido.");
+                return;
+            }
+
+            Serial.println("\nRecebendo o pino: " + String(pin));
+            Serial.println("Recebendo o estado: " + String(ledStateRequest));
             
-            pinMode(pin, OUTPUT); // Certifica que o pino está configurado como saída
-            digitalWrite(pin, ledState); // Liga ou desliga o LED
-            String state = (ledState == HIGH) ? "ON" : "OFF";
-            request->send(200, "text/plain", "LED " + String(pin) + " is " + state);
+            digitalWrite(pin, ledStateRequest); // Liga ou desliga o LED
+            ledState[ledNumero - 1] = ledStateRequest; // Atualiza o estado do LED no array
+
+            String state = (ledStateRequest == HIGH) ? "ON" : "OFF";
+            request->send(200, "text/plain", "LED " + String(ledNumero) + " está " + state);
         } else {
             request->send(400, "text/plain", "Missing parameters");
         }
     });
 
     // Rota para ligar e desligar o alarme
-    server.on("/alarme", HTTP_GET, [&alarmeAtivo](AsyncWebServerRequest *request) {
+    server.on("/alarme", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (request->hasParam("state")) {
             int alarmState = request->getParam("state")->value().toInt();
 
-            Serial.println("Recebendo o estado do alarme: " + String(alarmState));
+            Serial.println("\nRecebendo o estado do alarme: " + String(alarmState));
 
             // Ativa ou desativa o alarme
             if (alarmState == 1) {
-                alarmeAtivo = true;  // Liga o alarme
-                Serial.println("Alarme ativado remotamente.");
+                alarmeAtivo = true;
+                Serial.println("\nAlarme ligado remotamente.");
+                mostrarNoLCD("Alarme ligado", "remotamente");
                 alarmeLigando();
             } else if (alarmState == 0) {
-                alarmeAtivo = false; // Desliga o alarme
-                Serial.println("Alarme desativado remotamente.");
+                alarmeAtivo = false;
+                Serial.println("\nAlarme desligado remotamente.");
+                mostrarNoLCD("Alarme desligado", "remotamente");
                 alarmeDesligando();
             }
 
-            String state = (alarmeAtivo) ? "ON" : "OFF";
-            request->send(200, "text/plain", "Alarme está " + state);
+            String state = (alarmeAtivo) ? "ligado" : "desligado";
+            request->send(200, "text/plain", "O alarme está " + state);
         } else {
             request->send(400, "text/plain", "Parâmetro 'state' ausente");
         }
@@ -134,11 +135,13 @@ void setup() {
 
     // Rota para obter o status dos dispositivos
     server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request){
-        String status = "LED1: " + String(digitalRead(ledPin1)) + "\n";
+        String status = "";
+        status += "LED1: " + String(digitalRead(ledPin1)) + "\n";
         status += "LED2: " + String(digitalRead(ledPin2)) + "\n";
         status += "LED3: " + String(digitalRead(ledPin3)) + "\n";   
         status += (alarmeAtivo) ? "Alarme está ligado" : "Alarme está desligado";
 
+        Serial.println("\nEnviando status.");
         request->send(200, "text/plain", status);
     });
 
@@ -146,8 +149,9 @@ void setup() {
 }
 
 void loop() {
-    loopAlarme();  // Controle do sistema de alarme
-    loopPortao();  // Controle do sisetma de portão 
+    loopAlarme();   // Controle do sistema de alarme
+    loopPortao();   // Controle do sistema de portão 
+    loopLeds();     // Controle do sistema de leds
 
     // Verifica continuamente se o botão foi pressionado para resetar o Wi-Fi
     if (digitalRead(btnResetWifi) == LOW) {
@@ -166,6 +170,7 @@ void loop() {
         ESP.restart();
     }
 }
+
 
 
 
@@ -263,13 +268,83 @@ void ipTexto() {
 
 
 
-// ----- CONFIGURAÇÃO DO ALARME ----- //
-bool alarmeAtivo = false;
+// ----- CONFIGURAÇÃO DOS LEDS ----- //
+void setupLeds() {
+    // Configura os pinos de saida para os Leds
+    pinMode(ledPin1, OUTPUT);
+    pinMode(ledPin2, OUTPUT);
+    pinMode(ledPin3, OUTPUT);
 
+    // Configura os botões de ligação manual como entrada com pull-up interno
+    pinMode(btnLedPin1, INPUT_PULLUP);
+    pinMode(btnLedPin2, INPUT_PULLUP);
+    pinMode(btnLedPin3, INPUT_PULLUP);
+
+    // Inicializa os LEDs como desligados
+    digitalWrite(ledPin1, LOW);
+    digitalWrite(ledPin2, LOW);
+    digitalWrite(ledPin3, LOW);
+}
+
+void loopLeds() {
+    // Checa o botão do LED 1
+    if (digitalRead(btnLedPin1) == LOW) {
+        delay(200); // Debounce
+        
+        ledState[0] = !ledState[0]; // Alterna o estado do LED
+        digitalWrite(ledPin1, ledState[0]);
+
+        if (ledState[0] == 1) {
+            Serial.println("\nLED: 1 ligado internamente.");
+            mostrarNoLCD("LED: 1 ligado", "internamente");
+        } else {
+            Serial.println("\nLED: 1 desligado internamente.");
+            mostrarNoLCD("LED: 1 desligado", "internamente");
+        }
+    }
+
+    // Checa o botão do LED 2
+    if (digitalRead(btnLedPin2) == LOW) {
+        delay(200); // Debounce
+
+        ledState[1] = !ledState[1]; // Alterna o estado do LED
+        digitalWrite(ledPin2, ledState[1]);
+
+        if (ledState[1] == 1) {
+            Serial.println("\nLED: 2 ligado internamente.");
+            mostrarNoLCD("LED: 2 ligado", "internamente");
+        } else {
+            Serial.println("\nLED: 2 desligado internamente.");
+            mostrarNoLCD("LED: 2 desligado", "internamente");
+        }
+    }
+
+    // Checa o botão do LED 3
+    if (digitalRead(btnLedPin3) == LOW) {
+        delay(200); // Debounce
+
+        ledState[2] = !ledState[2]; // Alterna o estado do LED
+        digitalWrite(ledPin3, ledState[2]);
+
+        if (ledState[2] == 1) {
+            Serial.println("\nLED: 3 ligado internamente.");
+            mostrarNoLCD("LED: 3 ligado", "internamente");
+        } else {
+            Serial.println("\nLED: 3 desligado internamente.");
+            mostrarNoLCD("LED: 3 desligado", "internamente");
+        }
+    }
+}
+
+
+
+
+// ----- CONFIGURAÇÃO DO ALARME ----- //
 void setupAlarme() {
-    pinMode(btnAcionarAlarme, INPUT_PULLUP);
-    pinMode(reedSwitchPin, INPUT_PULLUP);
-    pinMode(buzzerPin, OUTPUT);
+    // Configura os pinos
+    pinMode(btnAcionarAlarme, INPUT_PULLUP);        // Pino de entrada com pull-up interno
+    pinMode(reedSwitchPin, INPUT_PULLUP);           // Pino de entrada com pull-up interno
+    pinMode(buzzerPin, OUTPUT);                     // Pino de saida
 }
 
 // Função para atualizar o estado do alarme
@@ -279,10 +354,12 @@ void loopAlarme() {
 
         alarmeAtivo = !alarmeAtivo;  // Alterna o estado
         if (alarmeAtivo) {
-            Serial.println("Sistema armado.");
+            Serial.println("\nAlarme ligado internamente.");
+            mostrarNoLCD("Alarme ligado", "pelo btn interno");
             alarmeLigando();
         } else {
-            Serial.println("Sistema desarmado.");
+            Serial.println("\nAlarme desligado internamente.");
+            mostrarNoLCD("Alarme desligado", "pelo btn interno");
             alarmeDesligando();
         }
         delay(500);
@@ -308,7 +385,6 @@ void alarmeTocando() {
 
 // Som de ligar o alarme
 void alarmeLigando() {
-    mostrarNoLCD("Alarme ligado", "Pelo btn interno");
     tone(buzzerPin, 1500);
     delay(300);
     noTone(buzzerPin);
@@ -316,7 +392,6 @@ void alarmeLigando() {
 
 // Som de desligar o alarme
 void alarmeDesligando() {
-    mostrarNoLCD("Alarme desligado", "Pelo btn interno");
     tone(buzzerPin, 1500);
     delay(150);
     noTone(buzzerPin);
@@ -337,7 +412,7 @@ bool portaoAberto = false;      // Estado inicial do portão (fechado)
  
 // int pinServo = 13; // Defina o pino do servo
 void setupPortao() {  
-    pinMode(bTNAbreFechaPortao, INPUT_PULLUP); 
+    pinMode(btnAbreFechaPortao, INPUT_PULLUP); 
     servoMotor.attach(pinServoMotor);
 
     // Inicializa o portão como fechado
@@ -345,7 +420,7 @@ void setupPortao() {
 }
 
 void loopPortao() {
-    if (digitalRead(bTNAbreFechaPortao) == LOW) {
+    if (digitalRead(btnAbreFechaPortao) == LOW) {
         delay(200);  // Debounce para evitar leituras múltiplas rápidas
         
         // Alterna entre abrir e fechar o portão
@@ -356,7 +431,7 @@ void loopPortao() {
         }
 
         // Aguarda até o botão ser solto antes de continuar
-        while (digitalRead(bTNAbreFechaPortao) == LOW) {
+        while (digitalRead(btnAbreFechaPortao) == LOW) {
             delay(10);  // Espera o botão ser solto
         }
     }
