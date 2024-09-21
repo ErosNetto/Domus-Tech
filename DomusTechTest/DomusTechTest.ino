@@ -117,13 +117,14 @@ void setup() {
             int alarmState = request->getParam("state")->value().toInt();
 
             // Ativa ou desativa o alarme
-            if (alarmState == 1 && alarmeAtivo == false) {
+            if (alarmState == 1 && !alarmeAtivo) {
                 alarmeAtivo = true;
                 Serial.println("\nAlarme ligado remotamente.");
                 mostrarNoLCD("Alarme ligado", "remotamente");
+                delay(1000);
                 alarmeLigando();
                 delay(1000);
-            } else if (alarmState == 0 && alarmeAtivo == true) {
+            } else if (alarmState == 0 && alarmeAtivo) {
                 alarmeAtivo = false;
                 Serial.println("\nAlarme desligado remotamente.");
                 mostrarNoLCD("Alarme desligado", "remotamente");
@@ -131,9 +132,10 @@ void setup() {
                 delay(1000);
             } else {
                 request->send(400, "text/plain", "Ação inválida.");
+                return;  // Sai da função após enviar a resposta
             }
 
-            String state = (alarmeAtivo) ? "ligado" : "desligado";
+            String state = alarmeAtivo ? "ligado" : "desligado";
             request->send(200, "text/plain", "O alarme está " + state);
         } else {
             request->send(400, "text/plain", "Parâmetro 'state' ausente");
