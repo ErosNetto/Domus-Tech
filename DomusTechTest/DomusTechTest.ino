@@ -14,7 +14,10 @@ const int btnResetESP32 = 32;             // Botão de resetar a ESP
 // Pinos do Alarme
 const int btnAcionarAlarme = 13;          // Botão para ligar/desligar alarme
 const int reedSwitchPin = 27;             // Sensor magnético (reed switch)
+const int pinSensorMovimento = 17;        // Pino do sensor movimento (PIR HC-SR501)
 const int buzzerPin = 26;                 // Buzzer do alarme
+const int ledAlarmeAtivado = 16;          // LED que indica que o alarme está ativado
+const int ledPIRDetectado = 12;           // LED que acende quando o PIR detecta movimento
 
 // Pinos do Portão usando Servo Motor
 const int btnAbreFechaPortao = 15;        // Botão único para abrir/fechar portão
@@ -376,17 +379,24 @@ void setupAlarme() {
     pinMode(btnAcionarAlarme, INPUT_PULLUP);        // Pino de entrada com pull-up interno
     pinMode(reedSwitchPin, INPUT_PULLUP);           // Pino de entrada com pull-up interno
     pinMode(buzzerPin, OUTPUT);                     // Pino de saida
+    pinMode(pinSensorMovimento, INPUT);             // Pino do sensor PIR
+    pinMode(ledAlarmeAtivado, OUTPUT);              // LED do alarme ativado
+    pinMode(ledPIRDetectado, OUTPUT);               // LED do sensor PIR
 }
 
 // Função para atualizar o estado do alarme
 void loopAlarme() {
+    // Verifica se o botão de acionamento do alarme foi pressionado
     if (digitalRead(btnAcionarAlarme) == LOW) {
         delay(200);  // Debounce para evitar leituras múltiplas rápidas
 
-        alarmeAtivo = !alarmeAtivo;
+        alarmeAtivo = !alarmeAtivo;  // Alterna o estado do alarme
         Serial.println(alarmeAtivo ? "\nAlarme ligado internamente." : "\nAlarme desligado internamente.");
         mostrarNoLCD(alarmeAtivo ? "Alarme ligado" : "Alarme desligado", "internamente.");
         alarmeAtivo ? alarmeLigando() : alarmeDesligando();
+
+        // Liga ou desliga o LED que indica se alarme está ativado
+        digitalWrite(ledAlarmeAtivado, alarmeAtivo ? HIGH : LOW);
 
         // Aguarda até o botão ser solto antes de continuar
         while (digitalRead(btnAcionarAlarme) == LOW) {
@@ -394,13 +404,23 @@ void loopAlarme() {
         }
     }
 
-    // Verifica o estado do sensor Reed Switch
+    // Verifica o estado do sensor Reed Switch (portão/porta)
     if (alarmeAtivo && digitalRead(reedSwitchPin) == HIGH) {
-        Serial.println("ATENCAO!!! Intrusão detectada! Alarme disparado.");
+        Serial.println("Sensor de portão ativado! Alarme disparado.");
         mostrarNoLCD("--- ATENCAO! ---", "Alarme disparado");
         alarmeTocando();
     } else {
         noTone(buzzerPin);
+    }
+
+    // Verifica o estado do sensor de movimento
+    if (alarmeAtivo && digitalRead(pinSensorMovimento) == HIGH) {
+        Serial.println("Movimento detectado pelo sensor PIR! Alarme disparado.");
+        mostrarNoLCD("--- ATENCAO! ---", "Alarme disparado");
+        digitalWrite(ledPIRDetectado, HIGH);            // Liga o LED quando o PIR detecta movimento
+        alarmeTocando();                                // Opcional: você pode disparar o alarme também
+    } else {
+        digitalWrite(ledPIRDetectado, LOW);             // Desliga o LED se não houver detecção de movimento
     }
 }
 
