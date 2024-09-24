@@ -222,7 +222,7 @@ void configurarWiFi() {
         mostrarNoLCD("Wi-Fi salvo", "Conectando...");
         delay(2000);
 
-        configurarIPFixo(); // Configura o IP fixo antes de tentar conectar
+        // configurarIPFixo(); // Configura o IP fixo antes de tentar conectar
 
         WiFi.begin(); // Tenta conectar ao Wi-Fi salvo
 
@@ -282,26 +282,35 @@ void iniciarModoConfiguracaoWiFi() {
         Serial.println("Wi-Fi Configurado com sucesso! " + WiFi.SSID());
         mostrarNoLCD("WiFi conectado!", WiFi.SSID());
         delay(3000);
-        configurarIPFixo();
+        // configurarIPFixo();
         delay(500);
         ipTexto();
     }
 }
 
 // Função para configurar o IP fixo
-void configurarIPFixo() {
-    if (!WiFi.config(local_IP, gateway, subnet)) {
-        delay(500);
-        Serial.println("Falha ao configurar o IP estático.");
-        mostrarNoLCD("Falha ao config", "o IP estatico");
-    }
-}
+// void configurarIPFixo() {
+//     if (!WiFi.config(local_IP, gateway, subnet)) {
+//         delay(500);
+//         Serial.println("Falha ao configurar o IP estático.");
+//         mostrarNoLCD("Falha ao config", "o IP estatico");
+//     }
+// }
 
 // Função para escrever o IP da ESP no terminal e no LCD 
+// void ipTexto() {
+//     Serial.println("IP estático configurado: " + local_IP.toString());
+//     mostrarNoLCD("IP atribuido:", local_IP.toString());
+// }
+
 void ipTexto() {
-    Serial.println("IP estático configurado: " + local_IP.toString());
-    mostrarNoLCD("IP atribuido:", local_IP.toString());
+    // Exibe o IP atribuído pela ESP diretamente
+    Serial.println("IP atribuído pela ESP: " + WiFi.localIP().toString());
+
+    // Exibe o IP no LCD diretamente
+    mostrarNoLCD("IP atribuído:", WiFi.localIP().toString());
 }
+
 
 
 
