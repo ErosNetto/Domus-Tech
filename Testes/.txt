@@ -27,3 +27,15 @@
 //         }
 //     }
 // }
+
+// TESTE
+// bool temporizadorAtivado = true;
+
+   // TESTE
+    // if (temporizadorAtivado && (ledState[2] == 0)) {
+    //     if (!alarmeLigado && digitalRead(pinSensorMovimento) == HIGH) {
+    //         digitalWrite(ledPin3, HIGH);    // Acende o LED
+    //         delay(10000);                   // Mantém o LED aceso por 10 segundos
+    //         digitalWrite(ledPin3, LOW);     // Desliga o LED
+    //     }
+    // }
