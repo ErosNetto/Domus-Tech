@@ -178,10 +178,7 @@ void setup() {
         status += "LED3: " + String(digitalRead(ledPin3)) + "\n";   
         status += (alarmeLigado) ? "Alarme está ligado\n" : "Alarme está desligado\n";
         status += (portaoAberto) ? "Portão está aberto\n" : "Portão está fechado\n";
-
-        if (alarmeAtivo) {
-            status += "Alarme disparado";
-        }    
+        status += (alarmeAtivo) ? "Alarme disparado" : "Alarme não está disparado";
 
         Serial.println("\nEnviando status.");
         request->send(200, "text/plain", status);
