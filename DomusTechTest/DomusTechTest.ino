@@ -16,7 +16,6 @@ const int reedSwitchPin = 27;             // Sensor magnético (reed switch) (IN
 const int pinSensorMovimento = 34;        // Pino do sensor movimento (PIR HC-SR501) (INPUT)
 const int buzzerPin = 26;                 // Buzzer do alarme (OUTPUT)
 const int ledAlarmeLigado = 12;           // LED que indica que o alarme está ativado (OUTPUT)
-const int ledPIRDetectado = 2;           // LED que acende quando o PIR detecta movimento (OUTPUT)
 
 // Pinos do Portão usando Servo Motor
 const int btnAbreFechaPortao = 15;        // Botão único para abrir/fechar portão (INPUT)
@@ -48,7 +47,8 @@ bool ledState[] = {0, 0, 0};              // Variável para controlar se os leds
 bool alarmeLigado = false;                // Variável para controlar se o alarme está ligado ou desligado
 bool alarmeAtivo = false;                 // Variável para controlar se o alarme foi ativado ou não
 bool portaoAberto = false;                // Variável para controlar se o portão está aberto ou fechado
-bool temporizadorAtivado = true;
+// TESTE
+// bool temporizadorAtivado = true;
 
 // Função para escrever no LCD I2C
 void mostrarNoLCD(const String& primeiraLinha, const String& segundaLinha) {
@@ -380,13 +380,14 @@ void loopLeds() {
         delay(200); // Debounce
     }
 
-    if (temporizadorAtivado && (ledState[2] == 0)) {
-        if (!alarmeLigado && digitalRead(pinSensorMovimento) == HIGH) {
-            digitalWrite(ledPin3, HIGH);    // Acende o LED
-            delay(10000);                   // Mantém o LED aceso por 10 segundos
-            digitalWrite(ledPin3, LOW);     // Desliga o LED
-        }
-    }
+    // TESTE
+    // if (temporizadorAtivado && (ledState[2] == 0)) {
+    //     if (!alarmeLigado && digitalRead(pinSensorMovimento) == HIGH) {
+    //         digitalWrite(ledPin3, HIGH);    // Acende o LED
+    //         delay(10000);                   // Mantém o LED aceso por 10 segundos
+    //         digitalWrite(ledPin3, LOW);     // Desliga o LED
+    //     }
+    // }
 }
 
 
@@ -400,12 +401,11 @@ void setupAlarme() {
     pinMode(buzzerPin, OUTPUT);               // Pino de saída para o buzzer
     pinMode(pinSensorMovimento, INPUT);       // Pino de entrada do sensor PIR
     pinMode(ledAlarmeLigado, OUTPUT);        // LED do alarme ativado
-    pinMode(ledPIRDetectado, OUTPUT);         // LED do sensor PIR
 
     // Inicializa LEDs como LOW
+    digitalWrite(ledAlarmeLigado, HIGH);
+    delay(500);
     digitalWrite(ledAlarmeLigado, LOW);
-    digitalWrite(ledPIRDetectado, LOW);
-
 }
 
 // Função para atualizar o estado do alarme
@@ -430,7 +430,7 @@ void loopAlarme() {
     }
 
     // Verifica os sensores
-     if (alarmeLigado) {
+    if (alarmeLigado && !alarmeAtivo) {
         // Verifica o estado do sensor Reed Switch (portão/porta)
         if (digitalRead(reedSwitchPin) == HIGH) {
             Serial.println("Sensor de portão ativado! Alarme disparado.");
@@ -443,23 +443,22 @@ void loopAlarme() {
             Serial.println("Sensor de movimento ativado! Alarme disparado.");
             mostrarNoLCD("--- ATENCAO! ---", "Alarme disparado");
             alarmeAtivo = true;
-            digitalWrite(ledPIRDetectado, HIGH);
-        } else {
-            digitalWrite(ledPIRDetectado, LOW);
         }
+    }
 
-        // Verifica se o alarme foi ativado
-        if (alarmeAtivo) {
-            somAlarmeTocando();
-        }
+    // Verifica se o alarme foi ativado
+    if (alarmeAtivo) {
+        somAlarmeTocando();
     }
 }
 
 // Som de disparo do alarme 
 void somAlarmeTocando() {
     tone(buzzerPin, 1500);
+    digitalWrite(ledAlarmeLigado, HIGH);
     delay(200);
     noTone(buzzerPin);
+    digitalWrite(ledAlarmeLigado, LOW);
     delay(200);
 }
 
