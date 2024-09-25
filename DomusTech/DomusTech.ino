@@ -5,48 +5,51 @@
 #include <AsyncTCP.h>                     // Biblioteca para o AsyncWebServer
 #include <ESP32Servo.h>                   // Biblioteca para o Servo Motor
 
-// ----- CONEXÃO DOS PINOS DA ESP ----- //
-// Botões de configuração da ESP (entrada)
-const int btnResetWifi = 5;               // Botão de resetar o wifiManager da ESP (INPUT)
-const int btnResetESP32 = 32;             // Botão de resetar a ESP (INPUT)
 
-// Pinos do Alarme
-const int btnAcionarAlarme = 13;          // Botão para ligar/desligar alarme (INPUT)
-const int reedSwitchPin = 27;             // Sensor magnético (reed switch) (INPUT)
-const int pinSensorMovimento = 34;        // Pino do sensor movimento (PIR HC-SR501) (INPUT)
-const int buzzerPin = 26;                 // Buzzer do alarme (OUTPUT)
-const int ledAlarmeLigado = 12;           // LED que indica que o alarme está ativado (OUTPUT)
+// ------------- CONEXÃO DOS PINOS DA ESP ------------- //
+// ------------- Botões de configuração da ESP (entrada) ------------- 
+const int btnResetWifi = 23;              // GPIO 23 - Botão de resetar o wifiManager (INPUT)
+const int btnResetESP32 = 5;              // GPIO 5 - Botão de resetar a ESP (INPUT) - realocado
 
-// Pinos do Portão usando Servo Motor
-const int btnAbreFechaPortao = 15;        // Botão único para abrir/fechar portão (INPUT)
-const int pinServoMotor = 33;             // Pino para o servo motor (OUTPUT)
+// ------------- Pinos do Alarme ------------- 
+const int btnAcionarAlarme = 15;          // GPIO 15 - Botão para ligar/desligar alarme (INPUT)
+const int reedSwitchPin = 14;             // GPIO 14 - Sensor magnético (reed switch) (INPUT)
+const int pinSensorMovimento = 13;        // GPIO 13 - Sensor de movimento (PIR HC-SR501) (INPUT)
+const int buzzerPin = 27;                 // GPIO 27 - Buzzer do alarme (OUTPUT)
+const int ledAlarmeLigado = 12;           // GPIO 12 - LED que indica que o alarme está ativado (OUTPUT)
+const int ledSensorPin = 26;           // GPIO 12 - LED que indica que o alarme está ativado (OUTPUT)
 
-// Leds da casa
-const int ledPin1 = 4;                   // Pino do LED 1 (OUTPUT)
-const int ledPin2 = 25;                   // Pino do LED 2 (OUTPUT)
-const int ledPin3 = 23;                    // Pino do LED 3 (OUTPUT)
+// ------------- Pinos do Portão usando Servo Motor ------------- 
+const int btnAbreFechaPortao = 4;         // GPIO 4 - Botão único para abrir/fechar portão (INPUT)
+const int pinServoMotor = 33;             // GPIO 33 - Pino para o servo motor (OUTPUT)
 
-// Botões para ligar manualmente os LEDs (entrada)
-const int btnLedPin1 = 14;                // Pino do botão para LED 1 (INPUT)
-const int btnLedPin2 = 19;                // Pino do botão para LED 2 (INPUT)
-const int btnLedPin3 = 18;                // Pino do botão para LED 3 (INPUT)
+// ------------- Leds da casa (saida) ------------- 
+const int ledPin1 = 18;                   // GPIO 18 - Pino do LED 1 (OUTPUT)
+const int ledPin2 = 19;                   // GPIO 19 - Pino do LED 2 (OUTPUT)
+const int ledPin3 = 25;                   // GPIO 25 - Pino do LED 3 (OUTPUT)
 
-// Pinos do Display I2C (SDA = 21, SCL = 22)
+// ------------- Botões para ligar manualmente os LEDs (entrada) ------------- 
+const int btnLedPin1 = 35;                // GPIO 35 - Pino do botão para LED 1 (INPUT)
+const int btnLedPin2 = 32;                // GPIO 32 - Pino do botão para LED 2 (INPUT)
+const int btnLedPin3 = 34;                // GPIO 34 - Pino do botão para LED 3 (INPUT)
+
+// ------------- Pinos do Display I2C (SDA = 21, SCL = 22) ------------- 
 LiquidCrystal_I2C lcd(0x27, 16, 2);       // Configura o LCD 16x2 com endereço I2C 0x27
 
-// Configurações do IP estático
+// ------------- Configurações do IP estático -------------
 IPAddress local_IP(192, 168, 18, 85);     // IP fixo
 IPAddress gateway(192, 168, 18, 1);       // Gateway na mesma sub-rede
 IPAddress subnet(255, 255, 255, 0);       // Máscara de sub-rede padrão
 
-WiFiManager wm;                           // Instância do WiFiManager
 AsyncWebServer server(80);
+WiFiManager wm;                           // Instância do WiFiManager
 
-// Variáveis globais
+// ------------- Variáveis globais -------------
 bool ledState[] = {0, 0, 0};              // Variável para controlar se os leds estão ligados ou desligados
 bool alarmeLigado = false;                // Variável para controlar se o alarme está ligado ou desligado
 bool alarmeAtivo = false;                 // Variável para controlar se o alarme foi ativado ou não
 bool portaoAberto = false;                // Variável para controlar se o portão está aberto ou fechado
+
 
 // Função para escrever no LCD I2C
 void mostrarNoLCD(const String& primeiraLinha, const String& segundaLinha) {
@@ -65,9 +68,9 @@ void setup() {
     pinMode(btnResetESP32, INPUT_PULLUP);
 
     // Configura os pinos de entrada e saida
+    setupLeds();
     setupAlarme();
     setupPortao();
-    setupLeds();
 
     // Inicialização
     lcd.init();                     // Inicializa o LCD
@@ -82,8 +85,8 @@ void setup() {
 
 
 
-    // ----- CONFIGURAÇÃO para as requisições HTTP ----- //
-    // Rota para controlar LEDs
+    // ------------- CONFIGURAÇÃO para as requisições HTTP ------------- //
+    // ------------- Rota para controlar LEDs ( http://192.168.18.85/led?ledNum=1&state=1 ) -------------
     server.on("/led", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (request->hasParam("ledNum") && request->hasParam("state")) {
             int ledNumero = request->getParam("ledNum")->value().toInt();
@@ -113,7 +116,7 @@ void setup() {
         }
     });
 
-    // Rota para ligar e desligar o alarme
+    // ------------- Rota para ligar e desligar o alarme ( http://192.168.18.85/alarme?state=1 ) -------------
     server.on("/alarme", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (request->hasParam("state")) {
             int alarmeState = request->getParam("state")->value().toInt();
@@ -146,7 +149,7 @@ void setup() {
         }
     });
 
-    // Rota para controlar o portão
+    // ------------- Rota para controlar o portão ( http://192.168.18.85/portao?state=1 ) -------------
     server.on("/portao", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (request->hasParam("state")) {
             int portaoState = request->getParam("state")->value().toInt();
@@ -170,8 +173,8 @@ void setup() {
         }
     });
 
-    // Rota para obter o status dos dispositivos
-    server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request){
+    // ------------- Rota para obter o status dos dispositivos ( http://192.168.18.85/status ) -------------
+    server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
         String status = "";
         status += "LED1: " + String(digitalRead(ledPin1)) + "\n";
         status += "LED2: " + String(digitalRead(ledPin2)) + "\n";
@@ -213,7 +216,7 @@ void loop() {
 
 
 
-// ----- CONFIGURAÇÃO DE WI-FI ----- //
+// ------------- CONFIGURAÇÃO DE WI-FI ------------- //
 // Inicia as configurações de Wi-Fi
 void configurarWiFi() {
     // Verifica se há redes Wi-Fi salvas no WiFiManager
@@ -315,7 +318,7 @@ void ipTexto() {
 
 
 
-// ----- CONFIGURAÇÃO DOS LEDS ----- //
+// ------------- CONFIGURAÇÃO DOS LEDS ------------- //
 void setupLeds() {
     // Configura os pinos de saida para os Leds
     pinMode(ledPin1, OUTPUT);
@@ -323,9 +326,9 @@ void setupLeds() {
     pinMode(ledPin3, OUTPUT);
 
     // Configura os botões de ligação manual como entrada com pull-up interno
-    pinMode(btnLedPin1, INPUT_PULLUP);
-    pinMode(btnLedPin2, INPUT_PULLUP);
-    pinMode(btnLedPin3, INPUT_PULLUP);
+    pinMode(btnLedPin1, INPUT);
+    pinMode(btnLedPin2, INPUT);
+    pinMode(btnLedPin3, INPUT);
 
     // Inicializa os LEDs como desligados
     digitalWrite(ledPin1, HIGH);
@@ -387,14 +390,15 @@ void loopLeds() {
 
 
 
-// ----- CONFIGURAÇÃO DO ALARME ----- //
+// ------------- CONFIGURAÇÃO DO ALARME ------------- //
 void setupAlarme() {
     // Configura os pinos do alarme
-    pinMode(btnAcionarAlarme, INPUT_PULLUP);  // Pino de entrada com pull-up interno
-    pinMode(reedSwitchPin, INPUT_PULLUP);     // Pino de entrada com pull-up interno
-    pinMode(buzzerPin, OUTPUT);               // Pino de saída para o buzzer
-    pinMode(pinSensorMovimento, INPUT);       // Pino de entrada do sensor PIR
-    pinMode(ledAlarmeLigado, OUTPUT);        // LED do alarme ativado
+    pinMode(btnAcionarAlarme, INPUT_PULLUP);    // Pino de entrada com pull-up interno
+    pinMode(reedSwitchPin, INPUT_PULLUP);       // Pino de entrada com pull-up interno
+    pinMode(buzzerPin, OUTPUT);                 // Pino de saída para o buzzer
+    pinMode(pinSensorMovimento, INPUT);         // Pino de entrada do sensor PIR
+    pinMode(ledAlarmeLigado, OUTPUT);           // LED do alarme ativado
+    pinMode(ledSensorPin, OUTPUT);              // LED do sensor PIN ativado
 
     // Inicializa LEDs como LOW
     digitalWrite(ledAlarmeLigado, HIGH);
@@ -427,7 +431,7 @@ void loopAlarme() {
     if (alarmeLigado && !alarmeAtivo) {
         // Verifica o estado do sensor Reed Switch (portão/porta)
         if (digitalRead(reedSwitchPin) == HIGH) {
-            Serial.println("Sensor de portão ativado! Alarme disparado.");
+            Serial.println("Sensor de porta ou janela ativado! Alarme disparado.");
             mostrarNoLCD("--- ATENCAO! ---", "Alarme disparado");
             alarmeAtivo = true;
         }
@@ -438,6 +442,13 @@ void loopAlarme() {
             mostrarNoLCD("--- ATENCAO! ---", "Alarme disparado");
             alarmeAtivo = true;
         }
+    }
+
+    // Verifica se o sensor PIN foi acionado
+    if (digitalRead(pinSensorMovimento) == HIGH) { 
+        digitalWrite(ledSensorPin, HIGH);
+    } else {
+        digitalWrite(ledSensorPin, LOW);
     }
 
     // Verifica se o alarme foi ativado
@@ -482,7 +493,7 @@ void somAlarmeDesligando() {
 
 
 
-// ----- CONFIGURAÇÃO DO PORTÃO ----- //
+// ------------- CONFIGURAÇÃO DO PORTÃO ------------- //
 // Definições dos pinos e variáveis
 Servo servoMotor;                // Instância do servo
 const int posicaoAberto = 85;    // Ângulo para abrir o portão
