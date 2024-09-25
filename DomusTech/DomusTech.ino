@@ -110,9 +110,9 @@ void setup() {
             ledState[ledNumero - 1] = ledStateRequest; // Atualiza o estado do LED no array
 
             String state = (ledStateRequest == HIGH) ? "ON" : "OFF";
-            request->send(200, "text/plain", "LED " + String(ledNumero) + " está " + state);
+            request->send(200, "text/plain", "LED " + String(ledNumero) + " esta " + state);
         } else {
-            request->send(400, "text/plain", "Parâmetro 'ledNum' e 'state' ausentes");
+            request->send(400, "text/plain", "Parâmetro 'ledNum' ou 'state' ausentes");
         }
     });
 
@@ -132,6 +132,7 @@ void setup() {
                 alarmeLigado = false;
                 alarmeAtivo = false; 
                 mostrarNoLCD("Alarme desligado", "remotamente");
+                pararSomAlarme();
                 somAlarmeDesligando();
                 pararSomAlarme();
                 Serial.println("\nAlarme desligado remotamente.");
@@ -157,7 +158,7 @@ void setup() {
             if (portaoState == 1 && portaoAberto == false) {
                 abrirPortao();
                 Serial.println("\nPortão aberto remotamente.");
-                mostrarNoLCD("Portão aberto", "remotamente");
+                mostrarNoLCD("Portao aberto", "remotamente");
             } else if (portaoState == 0 && portaoAberto == true) {
                 fecharPortao();
                 Serial.println("\nPortao fechado remotamente.");
@@ -179,9 +180,9 @@ void setup() {
         status += "LED1: " + String(digitalRead(ledPin1)) + "\n";
         status += "LED2: " + String(digitalRead(ledPin2)) + "\n";
         status += "LED3: " + String(digitalRead(ledPin3)) + "\n";   
-        status += (alarmeLigado) ? "Alarme está ligado\n" : "Alarme está desligado\n";
-        status += (portaoAberto) ? "Portão está aberto\n" : "Portão está fechado\n";
-        status += (alarmeAtivo) ? "Alarme disparado" : "Alarme não está disparado";
+        status += (alarmeLigado) ? "Alarme esta ligado\n" : "Alarme esta desligado\n";
+        status += (portaoAberto) ? "Portao esta aberto\n" : "Portao esta fechado\n";
+        status += (alarmeAtivo) ? "Alarme disparado" : "Alarme nao esta disparado";
 
         Serial.println("\nEnviando status.");
         request->send(200, "text/plain", status);
@@ -311,7 +312,7 @@ void ipTexto() {
     Serial.println("IP atribuído pela ESP: " + WiFi.localIP().toString());
 
     // Exibe o IP no LCD diretamente
-    mostrarNoLCD("IP atribuído:", WiFi.localIP().toString());
+    mostrarNoLCD("IP atribuido:", WiFi.localIP().toString());
 }
 
 
@@ -502,7 +503,7 @@ const int posicaoFechado = 0;    // Ângulo para fechar o portão
 void setupPortao() {  
     pinMode(btnAbreFechaPortao, INPUT_PULLUP);      // Pino de entrada com pull-up interno
     pinMode(pinServoMotor, OUTPUT);                 // Pino de saída para o servo motor
-    // fecharPortao();
+    fecharPortao();
 }
 
 // Função para atualizar o estado do portão
@@ -532,10 +533,10 @@ void abrirPortao() {
     servoMotor.attach(pinServoMotor);
     for (int pos = posicaoFechado; pos <= posicaoAberto; pos++) {
         servoMotor.write(pos);          // Move o servo para a posição aberta
-        delay(5);                       // Pequeno delay para suavizar o movimento
+        delay(2);                       // Pequeno delay para suavizar o movimento
     }
     portaoAberto = true;                // Atualiza o estado para aberto
-    delay(500);
+    delay(1000);
     servoMotor.detach();                // Desligar o controle do servo motor 
 }
 
@@ -544,9 +545,9 @@ void fecharPortao() {
     servoMotor.attach(pinServoMotor);
     for (int pos = posicaoAberto; pos >= posicaoFechado; pos--) {
         servoMotor.write(pos);          // Move o servo para a posição fechada
-        delay(5);                       // Pequeno delay para suavizar o movimento
+        delay(2);                       // Pequeno delay para suavizar o movimento
     }
     portaoAberto = false;               // Atualiza o estado para fechado
-    delay(500);
+    delay(1000);
     servoMotor.detach();                // Desligar o controle do servo motor 
 }
