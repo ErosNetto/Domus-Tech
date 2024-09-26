@@ -9,7 +9,7 @@
 // ------------- CONEXÃO DOS PINOS DA ESP ------------- //
 // ------------- Botões de configuração da ESP (entrada) ------------- 
 const int btnResetWifi = 23;              // GPIO 23 - Botão de resetar o wifiManager (INPUT)
-const int btnResetESP32 = 5;              // GPIO 5 - Botão de resetar a ESP (INPUT) - realocado
+const int btnResetESP32 = 5;              // GPIO 5 - Botão de resetar a ESP (INPUT)
 
 // ------------- Pinos do Alarme ------------- 
 const int btnAcionarAlarme = 15;          // GPIO 15 - Botão para ligar/desligar alarme (INPUT)
