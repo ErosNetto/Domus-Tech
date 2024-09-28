@@ -31,10 +31,15 @@ O **Domus Tech** é uma solução completa de automação residencial que permit
 
 ## Materiais Utilizados
 
-- ESP32
-- Display LCD I2C 16x2
-- LEDs e Resistores
-- Sensores de movimento e magnéticos
-- Servomotor
-- Módulo Buzzer 5V
-- Protoboard e Jumpers
+- **1x ESP32**: Microcontrolador principal do sistema, responsável pela comunicação via Wi-Fi e controle dos dispositivos.
+- **1x Display LCD I2C 16x2**: Interface para exibir informações do sistema, como status dos dispositivos.
+- **5x LEDs**: Indicadores visuais para sinalizar o estado dos sistemas, como iluminação ou alarme.
+- **3x Resistores 10Ω**: Usados para proteger os Push Button.
+- **5x Resistores 180Ω**: Usados para proteger os LEDs e outros componentes contra sobrecarga de corrente.
+- **7x Push Button**: Botões físicos para interação direta com o sistema, permitindo ações manuais, como ligar/desligar dispositivos.
+- **1x Sensor de Movimento (HCSR501)**: Detecta movimento em áreas específicas para automatizar a iluminação e melhorar a segurança.
+- **1x Sensor Magnético Reed Switch**: Sensor de abertura/fechamento usado em portas e janelas para detectar invasões.
+- **1x Módulo Buzzer Ativo 5V**: Emite alertas sonoros quando o sistema de alarme é acionado.
+- **1x Servomotor**: Controla a abertura e o fechamento do portão/garagem de forma remota.
+- **1x Protoboard**: Utilizado para montar e testar os circuitos de maneira prática, sem a necessidade de solda.
+- **1x Jumpers**: Fios para realizar as conexões entre os componentes no protoboard.
