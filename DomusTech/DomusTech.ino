@@ -104,7 +104,7 @@ void setup() {
                 return;
             }
 
-            Serial.println("LED " + String(ledNumero) + (ledStateRequest == HIGH) ? ": ON" : ": OFF");
+            Serial.println("LED " + String(ledNumero) + ((ledStateRequest == HIGH) ? ": ON" : ": OFF"));
             
             digitalWrite(pin, ledStateRequest); // Liga ou desliga o LED
             ledState[ledNumero - 1] = ledStateRequest; // Atualiza o estado do LED no array
@@ -497,7 +497,7 @@ void somAlarmeDesligando() {
 // ------------- CONFIGURAÇÃO DO PORTÃO ------------- //
 // Definições dos pinos e variáveis
 Servo servoMotor;                // Instância do servo
-const int posicaoAberto = 85;    // Ângulo para abrir o portão
+const int posicaoAberto = -85;    // Ângulo para abrir o portão
 const int posicaoFechado = 0;    // Ângulo para fechar o portão
 
 void setupPortao() {  
@@ -531,7 +531,7 @@ void loopPortao() {
 // Função para abrir o portão
 void abrirPortao() {
     servoMotor.attach(pinServoMotor);
-    for (int pos = posicaoFechado; pos <= posicaoAberto; pos++) {
+    for (int pos = posicaoFechado; pos >= posicaoAberto; pos++) {
         servoMotor.write(pos);          // Move o servo para a posição aberta
         delay(2);                       // Pequeno delay para suavizar o movimento
     }
@@ -543,7 +543,7 @@ void abrirPortao() {
 // Função para fechar o portão
 void fecharPortao() {
     servoMotor.attach(pinServoMotor);
-    for (int pos = posicaoAberto; pos >= posicaoFechado; pos--) {
+    for (int pos = posicaoAberto; pos <= posicaoFechado; pos--) {
         servoMotor.write(pos);          // Move o servo para a posição fechada
         delay(2);                       // Pequeno delay para suavizar o movimento
     }
