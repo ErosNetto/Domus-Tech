@@ -3,7 +3,7 @@
 #include <LiquidCrystal_I2C.h>            // Biblioteca do LCD
 #include <ESPAsyncWebServer.h>            // Biblioteca para criar um servidor
 #include <AsyncTCP.h>                     // Biblioteca para o AsyncWebServer
-#include <ESP32Servo.h>                   // Biblioteca para o Servo Motor
+// #include <ESP32Servo.h>                   // Biblioteca para o Servo Motor
 
 
 // ------------- CONEXÃO DOS PINOS DA ESP ------------- //
@@ -70,7 +70,7 @@ void setup() {
     // Configura os pinos de entrada e saida
     setupLeds();
     setupAlarme();
-    setupPortao();
+    // setupPortao();
 
     // Inicialização
     lcd.init();                     // Inicializa o LCD
@@ -151,28 +151,28 @@ void setup() {
     });
 
     // ------------- Rota para controlar o portão ( http://192.168.18.85/portao?state=1 ) -------------
-    server.on("/portao", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (request->hasParam("state")) {
-            int portaoState = request->getParam("state")->value().toInt();
+    // server.on("/portao", HTTP_GET, [](AsyncWebServerRequest *request) {
+    //     if (request->hasParam("state")) {
+    //         int portaoState = request->getParam("state")->value().toInt();
 
-            if (portaoState == 1 && portaoAberto == false) {
-                abrirPortao();
-                Serial.println("\nPortão aberto remotamente.");
-                mostrarNoLCD("Portao aberto", "remotamente");
-            } else if (portaoState == 0 && portaoAberto == true) {
-                fecharPortao();
-                Serial.println("\nPortao fechado remotamente.");
-                mostrarNoLCD("Portao fechado", "remotamente");
-            } else {
-                request->send(400, "text/plain", "Ação inválida.");
-            }
+    //         if (portaoState == 1 && portaoAberto == false) {
+    //             abrirPortao();
+    //             Serial.println("\nPortão aberto remotamente.");
+    //             mostrarNoLCD("Portao aberto", "remotamente");
+    //         } else if (portaoState == 0 && portaoAberto == true) {
+    //             fecharPortao();
+    //             Serial.println("\nPortao fechado remotamente.");
+    //             mostrarNoLCD("Portao fechado", "remotamente");
+    //         } else {
+    //             request->send(400, "text/plain", "Ação inválida.");
+    //         }
 
-            String state = (portaoState) ? "aberto." : "fechado.";
-            request->send(200, "text/plain", "O portão está " + state);
-        } else {
-            request->send(400, "text/plain", "Parâmetro 'state' ausente");
-        }
-    });
+    //         String state = (portaoState) ? "aberto." : "fechado.";
+    //         request->send(200, "text/plain", "O portão está " + state);
+    //     } else {
+    //         request->send(400, "text/plain", "Parâmetro 'state' ausente");
+    //     }
+    // });
 
     // ------------- Rota para obter o status dos dispositivos ( http://192.168.18.85/status ) -------------
     server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -193,7 +193,7 @@ void setup() {
 
 void loop() {
     loopAlarme();   // Controle do sistema de alarme
-    loopPortao();   // Controle do sistema de portão 
+    // loopPortao();   // Controle do sistema de portão 
     loopLeds();     // Controle do sistema de leds
 
     // Verifica continuamente se o botão foi pressionado para resetar o Wi-Fi
@@ -496,58 +496,58 @@ void somAlarmeDesligando() {
 
 // ------------- CONFIGURAÇÃO DO PORTÃO ------------- //
 // Definições dos pinos e variáveis
-Servo servoMotor;                // Instância do servo
-const int posicaoAberto = -85;    // Ângulo para abrir o portão
-const int posicaoFechado = 0;    // Ângulo para fechar o portão
+// Servo servoMotor;                // Instância do servo
+// const int posicaoAberto = 85;    // Ângulo para abrir o portão
+// const int posicaoFechado = 0;    // Ângulo para fechar o portão
 
-void setupPortao() {  
-    pinMode(btnAbreFechaPortao, INPUT_PULLUP);      // Pino de entrada com pull-up interno
-    pinMode(pinServoMotor, OUTPUT);                 // Pino de saída para o servo motor
-    fecharPortao();
-}
+// void setupPortao() {  
+//     pinMode(btnAbreFechaPortao, INPUT_PULLUP);      // Pino de entrada com pull-up interno
+//     pinMode(pinServoMotor, OUTPUT);                 // Pino de saída para o servo motor
+//     fecharPortao();
+// }
 
-// Função para atualizar o estado do portão
-void loopPortao() {
-    if (digitalRead(btnAbreFechaPortao) == LOW) {
-        delay(200);  // Debounce para evitar leituras múltiplas rápidas
+// // Função para atualizar o estado do portão
+// void loopPortao() {
+//     if (digitalRead(btnAbreFechaPortao) == LOW) {
+//         delay(200);  // Debounce para evitar leituras múltiplas rápidas
         
-        // Alterna entre abrir e fechar o portão
-        if (portaoAberto) {
-            fecharPortao();
-        } else {
-            abrirPortao();
-        }
+//         // Alterna entre abrir e fechar o portão
+//         if (portaoAberto) {
+//             fecharPortao();
+//         } else {
+//             abrirPortao();
+//         }
 
-        Serial.println(portaoAberto ? "\nPortão aberto internamente." : "\nPortão fechado internamente.");
-        mostrarNoLCD(portaoAberto ? "Portao aberto" : "Portao fechado", "internamente.");
+//         Serial.println(portaoAberto ? "\nPortão aberto internamente." : "\nPortão fechado internamente.");
+//         mostrarNoLCD(portaoAberto ? "Portao aberto" : "Portao fechado", "internamente.");
 
-        // Aguarda até o botão ser solto antes de continuar
-        while (digitalRead(btnAbreFechaPortao) == LOW) {
-            delay(10);
-        }
-    }
-}
+//         // Aguarda até o botão ser solto antes de continuar
+//         while (digitalRead(btnAbreFechaPortao) == LOW) {
+//             delay(10);
+//         }
+//     }
+// }
 
-// Função para abrir o portão
-void abrirPortao() {
-    servoMotor.attach(pinServoMotor);
-    for (int pos = posicaoFechado; pos >= posicaoAberto; pos++) {
-        servoMotor.write(pos);          // Move o servo para a posição aberta
-        delay(2);                       // Pequeno delay para suavizar o movimento
-    }
-    portaoAberto = true;                // Atualiza o estado para aberto
-    delay(1000);
-    servoMotor.detach();                // Desligar o controle do servo motor 
-}
+// // Função para abrir o portão
+// void abrirPortao() {
+//     servoMotor.attach(pinServoMotor);
+//     for (int pos = posicaoFechado; pos <= posicaoAberto; pos--) {
+//         servoMotor.write(pos);          // Move o servo para a posição aberta
+//         delay(2);                       // Pequeno delay para suavizar o movimento
+//     }
+//     portaoAberto = true;                // Atualiza o estado para aberto
+//     delay(1000);
+//     servoMotor.detach();                // Desligar o controle do servo motor 
+// }
 
-// Função para fechar o portão
-void fecharPortao() {
-    servoMotor.attach(pinServoMotor);
-    for (int pos = posicaoAberto; pos <= posicaoFechado; pos--) {
-        servoMotor.write(pos);          // Move o servo para a posição fechada
-        delay(2);                       // Pequeno delay para suavizar o movimento
-    }
-    portaoAberto = false;               // Atualiza o estado para fechado
-    delay(1000);
-    servoMotor.detach();                // Desligar o controle do servo motor 
-}
+// // Função para fechar o portão
+// void fecharPortao() {
+//     servoMotor.attach(pinServoMotor);
+//     for (int pos = posicaoAberto; pos >= posicaoFechado; pos++) {
+//         servoMotor.write(pos);          // Move o servo para a posição fechada
+//         delay(2);                       // Pequeno delay para suavizar o movimento
+//     }
+//     portaoAberto = false;               // Atualiza o estado para fechado
+//     delay(1000);
+//     servoMotor.detach();                // Desligar o controle do servo motor 
+// }
