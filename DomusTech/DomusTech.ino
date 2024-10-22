@@ -48,6 +48,7 @@ WiFiManager wm;                           // Instância do WiFiManager
 bool ledState[] = {0, 0, 0};              // Variável para controlar se os leds estão ligados ou desligados
 bool alarmeLigado = false;                // Variável para controlar se o alarme está ligado ou desligado
 bool alarmeAtivo = false;                 // Variável para controlar se o alarme foi ativado ou não
+bool sensorMovimentoAtivado = true;       // Variável para controlar se o sensor de movimento ficara ativado ou não
 bool portaoAberto = false;                // Variável para controlar se o portão está aberto ou fechado
 
 
@@ -138,12 +139,38 @@ void setup() {
                 Serial.println("\nAlarme desligado remotamente.");
             } else {
                 request->send(400, "text/plain", "Ação inválida.");
-                return;  // Sai da função após enviar a resposta
+                return;
             }
 
             digitalWrite(ledAlarmeLigado, alarmeLigado ? HIGH : LOW);
 
             String state = alarmeLigado ? "ligado" : "desligado";
+            request->send(200, "text/plain", "O alarme está " + state);
+        } else {
+            request->send(400, "text/plain", "Parâmetro 'state' ausente");
+        }
+    });
+
+    // ------------- Rota para ativar ou desativar o sensor de movimento ( http://192.168.18.85/sensormovimento?state=1 ) -------------
+    server.on("/sensormovimento", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (request->hasParam("state")) {
+            int sensorState = request->getParam("state")->value().toInt();
+
+            // Ativa ou desativa o sensor de movimento
+            if (sensorState == 1) {
+                sensorMovimentoAtivado = true;
+                mostrarNoLCD("-- Sensor PIR --", "Ativado");
+                Serial.println("\nSensor PIR ativado remotamente.");
+            } else if (sensorState == 0) {
+                sensorMovimentoAtivado = false;
+                mostrarNoLCD("-- Sensor PIR --", "Desativado");
+                Serial.println("\nSensor PIR desativado remotamente.");
+            } else {
+                request->send(400, "text/plain", "Ação inválida.");
+                return;
+            }
+
+            String state = sensorMovimentoAtivado ? "ativado" : "desativado";
             request->send(200, "text/plain", "O alarme está " + state);
         } else {
             request->send(400, "text/plain", "Parâmetro 'state' ausente");
@@ -438,7 +465,7 @@ void loopAlarme() {
         }
 
         // Verifica o estado do sensor de movimento
-        if (digitalRead(pinSensorMovimento) == HIGH) {
+        if (digitalRead(pinSensorMovimento) == HIGH && sensorMovimentoAtivado) {
             Serial.println("Sensor de movimento ativado! Alarme disparado.");
             mostrarNoLCD("--- ATENCAO! ---", "Alarme disparado");
             alarmeAtivo = true;
@@ -446,7 +473,7 @@ void loopAlarme() {
     }
 
     // Verifica se o sensor PIN foi acionado
-    if (digitalRead(pinSensorMovimento) == HIGH) { 
+    if (digitalRead(pinSensorMovimento) == HIGH && sensorMovimentoAtivado) { 
         digitalWrite(ledSensorPin, HIGH);
     } else {
         digitalWrite(ledSensorPin, LOW);
@@ -460,36 +487,73 @@ void loopAlarme() {
 
 // Som de disparo do alarme 
 void somAlarmeTocando() {
-    tone(buzzerPin, 1500);
     digitalWrite(ledAlarmeLigado, HIGH);
-    delay(200);
-    noTone(buzzerPin);
-    digitalWrite(ledAlarmeLigado, LOW);
-    delay(200);
+    digitalWrite(buzzerPin, HIGH);      
+    delay(200);                            
+    digitalWrite(buzzerPin, LOW);
+    digitalWrite(ledAlarmeLigado, LOW); 
+    delay(200);                            
 }
 
-// Desliga o buzzer ou qualquer som do alarme
+// Desliga o som do alarme
 void pararSomAlarme() {
-    noTone(buzzerPin);
+    digitalWrite(buzzerPin, LOW);
 }
 
 // Som de ligar o alarme
 void somAlarmeLigando() {
-    tone(buzzerPin, 1500);
+    digitalWrite(buzzerPin, HIGH);         
     delay(300);
-    noTone(buzzerPin);
+    digitalWrite(buzzerPin, LOW);
 }
 
 // Som de desligar o alarme
 void somAlarmeDesligando() {
-    tone(buzzerPin, 1500);
-    delay(150);
-    noTone(buzzerPin);
+    digitalWrite(buzzerPin, HIGH);         
+    delay(150);                             
+    digitalWrite(buzzerPin, LOW);
     delay(100);
-    tone(buzzerPin, 1500);
-    delay(150);
-    noTone(buzzerPin);
+    digitalWrite(buzzerPin, HIGH);
+    delay(150);                             
+    digitalWrite(buzzerPin, LOW);
 }
+
+
+
+
+// Som de disparo do alarme 
+// void somAlarmeTocando() {
+//     tone(buzzerPin, 1500);
+//     digitalWrite(ledAlarmeLigado, HIGH);
+//     delay(200);
+//     noTone(buzzerPin);
+//     digitalWrite(ledAlarmeLigado, LOW);
+//     delay(200);
+// }
+
+// Desliga o buzzer ou qualquer som do alarme
+// void pararSomAlarme() {
+//     noTone(buzzerPin);
+// }
+
+// Som de ligar o alarme
+// void somAlarmeLigando() {
+//     tone(buzzerPin, 1500);
+//     delay(300);
+//     noTone(buzzerPin);
+// }
+
+// Som de desligar o alarme
+// void somAlarmeDesligando() {
+//     tone(buzzerPin, 1500);
+//     delay(150);
+//     noTone(buzzerPin);
+//     delay(100);
+//     tone(buzzerPin, 1500);
+//     delay(150);
+//     noTone(buzzerPin);
+// }
+
 
 
 
