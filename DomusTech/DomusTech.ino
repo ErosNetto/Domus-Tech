@@ -6,6 +6,7 @@
 #include <ESP32Servo.h>                   // Biblioteca para o Servo Motor
 
 
+
 // ------------- CONEXÃO DOS PINOS DA ESP ------------- //
 // ------------- Botões de configuração da ESP (entrada) ------------- 
 const int btnResetWifi = 23;              // GPIO 23 - Botão de resetar o wifiManager (INPUT)
@@ -36,13 +37,20 @@ const int btnLedPin3 = 34;                // GPIO 34 - Pino do botão para LED 3
 // ------------- Pinos do Display I2C (SDA = 21, SCL = 22) ------------- 
 LiquidCrystal_I2C lcd(0x27, 16, 2);       // Configura o LCD 16x2 com endereço I2C 0x27
 
+
+
 // ------------- Configurações do IP estático -------------
 IPAddress local_IP(192, 168, 18, 85);     // IP fixo
 IPAddress gateway(192, 168, 18, 1);       // Gateway na mesma sub-rede
 IPAddress subnet(255, 255, 255, 0);       // Máscara de sub-rede padrão
 
-AsyncWebServer server(80);
+
+
+// ------------- Instâncias e Configurações -------------
+AsyncWebServer server(80);                // Configura o servidor para escutar requisições HTTP na porta 80
 WiFiManager wm;                           // Instância do WiFiManager
+
+
 
 // ------------- Variáveis globais -------------
 bool ledState[] = {0, 0, 0};              // Variável para controlar se os leds estão ligados ou desligados
@@ -50,6 +58,7 @@ bool alarmeLigado = false;                // Variável para controlar se o alarm
 bool alarmeAtivo = false;                 // Variável para controlar se o alarme foi ativado ou não
 bool sensorMovimentoAtivado = true;       // Variável para controlar se o sensor de movimento ficara ativado ou não
 bool portaoAberto = false;                // Variável para controlar se o portão está aberto ou fechado
+
 
 
 // Função para escrever no LCD I2C
@@ -60,6 +69,8 @@ void mostrarNoLCD(const String& primeiraLinha, const String& segundaLinha) {
     lcd.setCursor(0, 1);
     lcd.print(segundaLinha);
 }
+
+
 
 void setup() {
     Serial.begin(115200);
@@ -81,7 +92,8 @@ void setup() {
 
     // Inicia as configurações do Wi-Fi
     configurarWiFi();
-    delay(500);
+    delay(200);
+
 
 
 
@@ -248,6 +260,7 @@ void loop() {
 
 
 
+
 // ------------- CONFIGURAÇÃO DE WI-FI ------------- //
 // Inicia as configurações de Wi-Fi
 void configurarWiFi() {
@@ -277,7 +290,7 @@ void configurarWiFi() {
             Serial.println("Falha ao conectar ao Wi-Fi salvo.");
             mostrarNoLCD("Falha na conexao", "Reiniciando...");
             delay(3000);
-            ESP.restart(); // Reinicia a ESP32
+            ESP.restart();
         }
     } else {
         Serial.println("Nenhuma rede Wi-Fi salva foi encontrada.");
@@ -363,10 +376,6 @@ void setupLeds() {
     pinMode(btnLedPin3, INPUT);
 
     // Inicializa os LEDs como desligados
-    // digitalWrite(ledPin1, HIGH);
-    // digitalWrite(ledPin2, HIGH);
-    // digitalWrite(ledPin3, HIGH);
-    // delay(500);
     digitalWrite(ledPin1, LOW);
     digitalWrite(ledPin2, LOW);
     digitalWrite(ledPin3, LOW);
@@ -385,7 +394,7 @@ void loopLeds() {
             Serial.println("\nLED: 1 desligado internamente.");
             mostrarNoLCD("LED: 1 desligado", "internamente");
         }
-        delay(200); // Debounce
+        delay(200);
     }
 
     // Checa o botão do LED 2
@@ -400,7 +409,7 @@ void loopLeds() {
             Serial.println("\nLED: 2 desligado internamente.");
             mostrarNoLCD("LED: 2 desligado", "internamente");
         }
-        delay(200); // Debounce
+        delay(200);
     }
 
     // Checa o botão do LED 3
@@ -415,9 +424,10 @@ void loopLeds() {
             Serial.println("\nLED: 3 desligado internamente.");
             mostrarNoLCD("LED: 3 desligado", "internamente");
         }
-        delay(200); // Debounce
+        delay(200);
     }
 }
+
 
 
 
@@ -444,10 +454,11 @@ void setupAlarme() {
 void loopAlarme() {
     // Verifica se o botão de acionamento do alarme foi pressionado
     if (digitalRead(btnAcionarAlarme) == LOW) {
-        delay(200);  // Debounce para evitar leituras múltiplas rápidas
+        delay(200);
 
         alarmeLigado = !alarmeLigado;  // Alterna o estado do alarme
         alarmeAtivo = false;
+
         Serial.println(alarmeLigado ? "\nAlarme ligado internamente." : "\nAlarme desligado internamente.");
         mostrarNoLCD(alarmeLigado ? "Alarme ligado" : "Alarme desligado", "internamente.");
 
@@ -491,21 +502,6 @@ void loopAlarme() {
     }
 }
 
-// Som de disparo do alarme 
-void somAlarmeTocando() {
-    digitalWrite(ledAlarmeLigado, HIGH);
-    digitalWrite(buzzerPin, HIGH);      
-    delay(200);                            
-    digitalWrite(buzzerPin, LOW);
-    digitalWrite(ledAlarmeLigado, LOW); 
-    delay(200);                            
-}
-
-// Desliga o som do alarme
-void pararSomAlarme() {
-    digitalWrite(buzzerPin, LOW);
-}
-
 // Som de ligar o alarme
 void somAlarmeLigando() {
     digitalWrite(buzzerPin, HIGH);         
@@ -524,6 +520,16 @@ void somAlarmeDesligando() {
     digitalWrite(buzzerPin, LOW);
 }
 
+// Som de disparo do alarme 
+void somAlarmeTocando() {
+    digitalWrite(ledAlarmeLigado, HIGH);
+    digitalWrite(buzzerPin, HIGH);      
+    delay(200);                            
+    digitalWrite(buzzerPin, LOW);
+    digitalWrite(ledAlarmeLigado, LOW); 
+    delay(200);                            
+}
+
 // Som de ativar o sensor de movimento
 void somAtivaSensorMovimento() {
     digitalWrite(buzzerPin, HIGH);         
@@ -538,24 +544,10 @@ void somDesativaSensorMovimento() {
     digitalWrite(buzzerPin, LOW);
 }
 
-
-
-
-
-// Som de disparo do alarme 
-// void somAlarmeTocando() {
-//     tone(buzzerPin, 1500);
-//     digitalWrite(ledAlarmeLigado, HIGH);
-//     delay(200);
-//     noTone(buzzerPin);
-//     digitalWrite(ledAlarmeLigado, LOW);
-//     delay(200);
-// }
-
-// Desliga o buzzer ou qualquer som do alarme
-// void pararSomAlarme() {
-//     noTone(buzzerPin);
-// }
+// Função para desliga o buzzer ou qualquer som do alarme
+void pararSomAlarme() {
+    digitalWrite(buzzerPin, LOW);
+}
 
 // Som de ligar o alarme
 // void somAlarmeLigando() {
@@ -575,13 +567,28 @@ void somDesativaSensorMovimento() {
 //     noTone(buzzerPin);
 // }
 
+// Som de disparo do alarme 
+// void somAlarmeTocando() {
+//     tone(buzzerPin, 1500);
+//     digitalWrite(ledAlarmeLigado, HIGH);
+//     delay(200);
+//     noTone(buzzerPin);
+//     digitalWrite(ledAlarmeLigado, LOW);
+//     delay(200);
+// }
+
+// Função para desliga o buzzer ou qualquer som do alarme
+// void pararSomAlarme() {
+//     noTone(buzzerPin);
+// }
+
 
 
 
 
 // ------------- CONFIGURAÇÃO DO PORTÃO ------------- //
 // Definições dos pinos e variáveis
-Servo servoMotor;                // Instância do servo
+Servo servoMotor;                 // Instância do servo
 const int posicaoAberto = 165;    // Ângulo para abrir o portão
 const int posicaoFechado = 40;    // Ângulo para fechar o portão
 
@@ -595,7 +602,7 @@ void setupPortao() {
 // Função para atualizar o estado do portão
 void loopPortao() {
     if (digitalRead(btnAbreFechaPortao) == LOW) {
-        delay(200);  // Debounce para evitar leituras múltiplas rápidas
+        delay(200);
         
         // Alterna entre abrir e fechar o portão
         if (portaoAberto) {
