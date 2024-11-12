@@ -39,3 +39,37 @@
     //         digitalWrite(ledPin3, LOW);     // Desliga o LED
     //     }
     // }
+
+
+// Som de ligar o alarme
+// void somAlarmeLigando() {
+//     tone(buzzerPin, 1500);
+//     delay(300);
+//     noTone(buzzerPin);
+// }
+
+// Som de desligar o alarme
+// void somAlarmeDesligando() {
+//     tone(buzzerPin, 1500);
+//     delay(150);
+//     noTone(buzzerPin);
+//     delay(100);
+//     tone(buzzerPin, 1500);
+//     delay(150);
+//     noTone(buzzerPin);
+// }
+
+// Som de disparo do alarme 
+// void somAlarmeTocando() {
+//     tone(buzzerPin, 1500);
+//     digitalWrite(ledAlarmeLigado, HIGH);
+//     delay(200);
+//     noTone(buzzerPin);
+//     digitalWrite(ledAlarmeLigado, LOW);
+//     delay(200);
+// }
+
+// Função para desliga o buzzer ou qualquer som do alarme
+// void pararSomAlarme() {
+//     noTone(buzzerPin);
+// }

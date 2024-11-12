@@ -4,7 +4,7 @@
 #include <ESPAsyncWebServer.h>            // Biblioteca para criar um servidor
 #include <AsyncTCP.h>                     // Biblioteca para o AsyncWebServer
 #include <ESP32Servo.h>                   // Biblioteca para o Servo Motor
-
+#include <Preferences.h>                  // Biblioteca para amazenar dados na ESP32 utilizando NVS (Non-Volatile Storage)
 
 
 // ------------- CONEXÃO DOS PINOS DA ESP ------------- //
@@ -49,6 +49,7 @@ IPAddress subnet(255, 255, 255, 0);       // Máscara de sub-rede padrão
 // ------------- Instâncias e Configurações -------------
 AsyncWebServer server(80);                // Configura o servidor para escutar requisições HTTP na porta 80
 WiFiManager wm;                           // Instância do WiFiManager
+Preferences preferences;                  // Instância do Preferences
 
 
 
@@ -56,7 +57,8 @@ WiFiManager wm;                           // Instância do WiFiManager
 bool ledState[] = {0, 0, 0};              // Variável para controlar se os leds estão ligados ou desligados
 bool alarmeLigado = false;                // Variável para controlar se o alarme está ligado ou desligado
 bool alarmeAtivo = false;                 // Variável para controlar se o alarme foi ativado ou não
-bool sensorMovimentoAtivado = true;       // Variável para controlar se o sensor de movimento ficara ativado ou não
+bool sensorMovimentoAtivado = true;       // Variável para controlar se o sensor de movimento ficará ativado ou não
+bool sensorPortaAtivado = true;           // Variável para controlar se o sensor de porta ficará ativado ou não
 bool portaoAberto = false;                // Variável para controlar se o portão está aberto ou fechado
 
 
@@ -78,6 +80,19 @@ void setup() {
     // Configura os pinos dos botões pra ESP como entrada e com pull-up interno
     pinMode(btnResetWifi, INPUT_PULLUP);
     pinMode(btnResetESP32, INPUT_PULLUP);
+
+    // Inicializar a NVS
+    preferences.begin("config", false);
+
+    // Carrega as variáveis salvas
+    ledState[0] = preferences.getBool("ledState0", false);
+    ledState[1] = preferences.getBool("ledState1", false);
+    ledState[2] = preferences.getBool("ledState2", false);
+    alarmeLigado = preferences.getBool("alarmeLigado", false);
+    alarmeAtivo = preferences.getBool("alarmeAtivo", false);
+    sensorMovimentoAtivado = preferences.getBool("sensorMovAtiv", true);
+    sensorPortaAtivado = preferences.getBool("sensorPorAtiv", true);
+    // portaoAberto = preferences.getBool("portaoAberto", false);
 
     // Configura os pinos de entrada e saida
     setupLeds();
@@ -122,10 +137,13 @@ void setup() {
             digitalWrite(pin, ledStateRequest); // Liga ou desliga o LED
             ledState[ledNumero - 1] = ledStateRequest; // Atualiza o estado do LED no array
 
+            // Salva o stado dos leds na memoria
+            saveLEDsPreferences();
+
             String state = (ledStateRequest == HIGH) ? "ON" : "OFF";
             request->send(200, "text/plain", "LED " + String(ledNumero) + " esta " + state);
         } else {
-            request->send(400, "text/plain", "Parâmetro 'ledNum' ou 'state' ausentes");
+            request->send(400, "text/plain", "Parâmetro 'ledNum' ou 'state' ausentes.");
         }
     });
 
@@ -158,38 +176,72 @@ void setup() {
 
             digitalWrite(ledAlarmeLigado, alarmeLigado ? HIGH : LOW);
 
-            String state = alarmeLigado ? "ligado" : "desligado";
+            // Salva o stado do alarme na memoria
+            saveAlarmePreferences();
+
+            String state = alarmeLigado ? "ligado." : "desligado.";
             request->send(200, "text/plain", "O alarme está " + state);
         } else {
-            request->send(400, "text/plain", "Parâmetro 'state' ausente");
+            request->send(400, "text/plain", "Parâmetro 'state' ausente.");
         }
     });
 
-    // ------------- Rota para ativar ou desativar o sensor de movimento ( http://192.168.18.85/sensormovimento?state=1 ) -------------
-    server.on("/sensormovimento", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (request->hasParam("state")) {
+    // ------------- Rota para ativar ou desativar o sensor de movimento ( http://192.168.18.85/sensores?sensor=movimento&state=1 ou http://192.168.18.85/sensores?sensor=porta&state=1 ) -------------
+    server.on("/sensores", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (request->hasParam("sensor") && request->hasParam("state")) {
+            String sensorType = request->getParam("sensor")->value();
             int sensorState = request->getParam("state")->value().toInt();
 
-            // Ativa ou desativa o sensor de movimento
-            if (sensorState == 1) {
-                sensorMovimentoAtivado = true;
-                mostrarNoLCD("-- Sensor PIR --", "Ativado");
-                somAtivaSensorMovimento();
-                Serial.println("\nSensor PIR ativado remotamente.");
-            } else if (sensorState == 0) {
-                sensorMovimentoAtivado = false;
-                mostrarNoLCD("-- Sensor PIR --", "Desativado");
-                somDesativaSensorMovimento();
-                Serial.println("\nSensor PIR desativado remotamente.");
+            if (sensorType == "movimento") {
+                // Ativa ou desativa o sensor de movimento
+                if (sensorState == 1) {
+                    sensorMovimentoAtivado = true;
+                    mostrarNoLCD("-- Sensor PIR --", "Ativado");
+                    somAtivandoSensor();
+                    Serial.println("\nSensor PIR ativado remotamente.");
+                } else if (sensorState == 0) {
+                    sensorMovimentoAtivado = false;
+                    mostrarNoLCD("-- Sensor PIR --", "Desativado");
+                    somDesativandoSensor();
+                    Serial.println("\nSensor PIR desativado remotamente.");
+                } else {
+                    request->send(400, "text/plain", "Ação inválida.");
+                    return;
+                }
+
+                // Salva o estado do sensor na memoria
+                saveOpcoesAlarmePreferences();
+
+                String state = sensorMovimentoAtivado ? "ativado." : "desativado.";
+                request->send(200, "text/plain", "O sensor de movimento PIR está " + state);
+            } else if (sensorType == "porta") {
+                // Ativa ou desativa o sensor de porta
+                if (sensorState == 1) {
+                    sensorPortaAtivado = true;
+                    mostrarNoLCD("- Sensor Porta -", "Ativado");
+                    somAtivandoSensor();
+                    Serial.println("\nSensor de porta ativado remotamente.");
+                } else if (sensorState == 0) {
+                    sensorPortaAtivado = false;
+                    mostrarNoLCD("- Sensor Porta -", "Desativado");
+                    somDesativandoSensor();
+                    Serial.println("\nSensor de porta desativado remotamente.");
+                } else {
+                    request->send(400, "text/plain", "Ação inválida.");
+                    return;
+                }
+
+                // Salva o estado do sensor na memoria
+                saveOpcoesAlarmePreferences();
+
+                String state = sensorPortaAtivado ? "ativado." : "desativado.";
+                request->send(200, "text/plain", "O sensor de porta está " + state);
             } else {
-                request->send(400, "text/plain", "Ação inválida.");
+                request->send(400, "text/plain", "Sensor inválido.");
                 return;
             }
-
-            String state = sensorMovimentoAtivado ? "ativado" : "desativado";
-            request->send(200, "text/plain", "O alarme está " + state);
         } else {
-            request->send(400, "text/plain", "Parâmetro 'state' ausente");
+            request->send(400, "text/plain", "Parâmetro 'sensor' ou 'state' ausentes.");
         }
     });
 
@@ -210,10 +262,13 @@ void setup() {
                 request->send(400, "text/plain", "Ação inválida.");
             }
 
+            // Salva o estado do portão na memoria
+            // savePortaoPreferences();
+
             String state = (portaoState) ? "aberto." : "fechado.";
             request->send(200, "text/plain", "O portão está " + state);
         } else {
-            request->send(400, "text/plain", "Parâmetro 'state' ausente");
+            request->send(400, "text/plain", "Parâmetro 'state' ausente.");
         }
     });
 
@@ -229,6 +284,16 @@ void setup() {
 
         Serial.println("\nEnviando status.");
         request->send(200, "text/plain", status);
+    });
+
+    // ------------- Rota para obter o status dos dispositivos ( http://192.168.18.85/opcoes) -------------
+    server.on("/opcoes", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String opcoes = "";
+        opcoes += "SensorPIR: " + String(sensorMovimentoAtivado) + "\n";
+        opcoes += "SensorPorta: " + String(sensorPortaAtivado);
+
+        Serial.println("\nEnviando opções.");
+        request->send(200, "text/plain", opcoes);
     });
 
     server.begin();
@@ -256,6 +321,28 @@ void loop() {
         ESP.restart();
     }
 }
+
+// Funções para salvar os estados atuais na NVS
+void saveLEDsPreferences() {
+    preferences.putBool("ledState0", ledState[0]);
+    preferences.putBool("ledState1", ledState[1]);
+    preferences.putBool("ledState2", ledState[2]);
+}
+
+void saveAlarmePreferences() {
+    preferences.putBool("alarmeLigado", alarmeLigado);
+    preferences.putBool("alarmeAtivo", alarmeAtivo);
+}
+
+void saveOpcoesAlarmePreferences() {
+    preferences.putBool("sensorMovAtiv", sensorMovimentoAtivado);
+    preferences.putBool("sensorPorAtiv", sensorPortaAtivado);
+}
+
+// void savePortaoPreferences() {
+//     preferences.putBool("portaoAberto", portaoAberto);
+// }
+
 
 
 
@@ -365,68 +452,68 @@ void ipTexto() {
 
 // ------------- CONFIGURAÇÃO DOS LEDS ------------- //
 void setupLeds() {
-    // Configura os pinos de saida para os Leds
+    // Configura os pinos de saída para os LEDs
     pinMode(ledPin1, OUTPUT);
     pinMode(ledPin2, OUTPUT);
     pinMode(ledPin3, OUTPUT);
 
     // Configura os botões de ligação manual como entrada com pull-up interno
-    pinMode(btnLedPin1, INPUT);
-    pinMode(btnLedPin2, INPUT);
-    pinMode(btnLedPin3, INPUT);
+    pinMode(btnLedPin1, INPUT_PULLUP);
+    pinMode(btnLedPin2, INPUT_PULLUP);
+    pinMode(btnLedPin3, INPUT_PULLUP);
 
-    // Inicializa os LEDs como desligados
-    digitalWrite(ledPin1, LOW);
-    digitalWrite(ledPin2, LOW);
-    digitalWrite(ledPin3, LOW);
+    // Inicializa os LEDs com o estado salvo
+    digitalWrite(ledPin1, ledState[0] ? HIGH : LOW);
+    digitalWrite(ledPin2, ledState[1] ? HIGH : LOW);
+    digitalWrite(ledPin3, ledState[2] ? HIGH : LOW);
+}
+
+// Função para alterar o stado dos leds
+void toggleLed(int ledIndex, int ledPin, const char* ledName) {
+    // Alterna o estado do LED e salva o novo estado
+    ledState[ledIndex] = !ledState[ledIndex];
+    digitalWrite(ledPin, ledState[ledIndex]);
+
+    // Exibe mensagem de estado no Serial e no LCD
+    if (ledState[ledIndex]) {
+        Serial.printf("\n%s ligado internamente.\n", ledName);
+        mostrarNoLCD(ledName, "ligado internamente");
+    } else {
+        Serial.printf("\n%s desligado internamente.\n", ledName);
+        mostrarNoLCD(ledName, "desligado internamente");
+    }
 }
 
 void loopLeds() {
-    // Checa o botão do LED 1
+    bool stateChanged = false;
+
+    // Checa e alterna o LED 1
     if (digitalRead(btnLedPin1) == LOW) {
-        ledState[0] = !ledState[0];             // Alterna o estado do LED
-        digitalWrite(ledPin1, ledState[0]);     // Liga ou desliga o led
-
-        if (ledState[0] == 1) {
-            Serial.println("\nLED: 1 ligado internamente.");
-            mostrarNoLCD("LED: 1 ligado", "internamente");
-        } else {
-            Serial.println("\nLED: 1 desligado internamente.");
-            mostrarNoLCD("LED: 1 desligado", "internamente");
-        }
+        toggleLed(0, ledPin1, "LED 1");
+        stateChanged = true;
         delay(200);
     }
 
-    // Checa o botão do LED 2
+    // Checa e alterna o LED 2
     if (digitalRead(btnLedPin2) == LOW) {
-        ledState[1] = !ledState[1];             // Alterna o estado do LED
-        digitalWrite(ledPin2, ledState[1]);     // Liga ou desliga o led
-
-        if (ledState[1] == 1) {
-            Serial.println("\nLED: 2 ligado internamente.");
-            mostrarNoLCD("LED: 2 ligado", "internamente");
-        } else {
-            Serial.println("\nLED: 2 desligado internamente.");
-            mostrarNoLCD("LED: 2 desligado", "internamente");
-        }
+        toggleLed(1, ledPin2, "LED 2");
+        stateChanged = true;
         delay(200);
     }
 
-    // Checa o botão do LED 3
+    // Checa e alterna o LED 3
     if (digitalRead(btnLedPin3) == LOW) {
-        ledState[2] = !ledState[2];             // Alterna o estado do LED
-        digitalWrite(ledPin3, ledState[2]);     // Liga ou desliga o led
-
-        if (ledState[2] == 1) {
-            Serial.println("\nLED: 3 ligado internamente.");
-            mostrarNoLCD("LED: 3 ligado", "internamente");
-        } else {
-            Serial.println("\nLED: 3 desligado internamente.");
-            mostrarNoLCD("LED: 3 desligado", "internamente");
-        }
+        toggleLed(2, ledPin3, "LED 3");
+        stateChanged = true;
         delay(200);
+    }
+
+    // Salva o estado dos leds
+    if (stateChanged) {
+        saveLEDsPreferences();
     }
 }
+
 
 
 
@@ -446,7 +533,7 @@ void setupAlarme() {
     digitalWrite(ledAlarmeLigado, HIGH);
     digitalWrite(ledSensorPin, HIGH);
     delay(500);
-    digitalWrite(ledAlarmeLigado, LOW);
+    digitalWrite(ledAlarmeLigado, alarmeLigado ? HIGH : LOW);
     digitalWrite(ledSensorPin, LOW);
 }
 
@@ -466,6 +553,9 @@ void loopAlarme() {
         // Liga ou desliga o LED que indica se o alarme está ativado
         digitalWrite(ledAlarmeLigado, alarmeLigado ? HIGH : LOW);
 
+        // Salva o estado do alarme
+        saveAlarmePreferences();
+
         // Aguarda até o botão ser solto antes de continuar
         while (digitalRead(btnAcionarAlarme) == LOW) {
             delay(10);
@@ -475,28 +565,30 @@ void loopAlarme() {
     // Verifica os sensores
     if (alarmeLigado && !alarmeAtivo) {
         // Verifica o estado do sensor Reed Switch (portão/porta)
-        if (digitalRead(reedSwitchPin) == HIGH) {
-            Serial.println("Sensor de porta ou janela ativado! Alarme disparado.");
-            mostrarNoLCD("--- ATENCAO! ---", "Alarme disparado");
+        if (digitalRead(reedSwitchPin) == HIGH && sensorPortaAtivado) {
+            Serial.println("Sensor de porta ativado! Alarme disparado.");
+            mostrarNoLCD("-ALARME TOCANDO-", "Sensor porta");
             alarmeAtivo = true;
+            saveAlarmePreferences();
         }
 
         // Verifica o estado do sensor de movimento
         if (digitalRead(pinSensorMovimento) == HIGH && sensorMovimentoAtivado) {
             Serial.println("Sensor de movimento ativado! Alarme disparado.");
-            mostrarNoLCD("--- ATENCAO! ---", "Alarme disparado");
+            mostrarNoLCD("-ALARME TOCANDO-", "Sensor movimento");
             alarmeAtivo = true;
+            saveAlarmePreferences();
         }
     }
 
-    // Verifica se o sensor PIN foi acionado
+    // Verifica e atualiza o LED do sensor de movimento
     if (digitalRead(pinSensorMovimento) == HIGH && sensorMovimentoAtivado) { 
         digitalWrite(ledSensorPin, HIGH);
     } else {
         digitalWrite(ledSensorPin, LOW);
     }
 
-    // Verifica se o alarme foi ativado
+    // Verifica se o alarme foi ativado e dispara o som do alarme
     if (alarmeAtivo) {
         somAlarmeTocando();
     }
@@ -530,15 +622,15 @@ void somAlarmeTocando() {
     delay(200);                            
 }
 
-// Som de ativar o sensor de movimento
-void somAtivaSensorMovimento() {
+// Som de ativar um sensor
+void somAtivandoSensor() {
     digitalWrite(buzzerPin, HIGH);         
     delay(800);                             
     digitalWrite(buzzerPin, LOW);
 }
 
-// Som de desativar o sensor de movimento
-void somDesativaSensorMovimento() {
+// Som de desativar um sensor
+void somDesativandoSensor() {
     digitalWrite(buzzerPin, HIGH);         
     delay(1600);                             
     digitalWrite(buzzerPin, LOW);
@@ -548,39 +640,6 @@ void somDesativaSensorMovimento() {
 void pararSomAlarme() {
     digitalWrite(buzzerPin, LOW);
 }
-
-// Som de ligar o alarme
-// void somAlarmeLigando() {
-//     tone(buzzerPin, 1500);
-//     delay(300);
-//     noTone(buzzerPin);
-// }
-
-// Som de desligar o alarme
-// void somAlarmeDesligando() {
-//     tone(buzzerPin, 1500);
-//     delay(150);
-//     noTone(buzzerPin);
-//     delay(100);
-//     tone(buzzerPin, 1500);
-//     delay(150);
-//     noTone(buzzerPin);
-// }
-
-// Som de disparo do alarme 
-// void somAlarmeTocando() {
-//     tone(buzzerPin, 1500);
-//     digitalWrite(ledAlarmeLigado, HIGH);
-//     delay(200);
-//     noTone(buzzerPin);
-//     digitalWrite(ledAlarmeLigado, LOW);
-//     delay(200);
-// }
-
-// Função para desliga o buzzer ou qualquer som do alarme
-// void pararSomAlarme() {
-//     noTone(buzzerPin);
-// }
 
 
 
