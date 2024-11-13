@@ -648,14 +648,15 @@ void loopAlarme() {
     }
 }
 
-// Som de ligar o alarme
+// Som de ligar o alarme (um bip simples e curto)
 void somAlarmeLigando() {
     digitalWrite(buzzerPin, HIGH);         
-    delay(300);
+    // delay(300);
+    delay(150);
     digitalWrite(buzzerPin, LOW);
 }
 
-// Som de desligar o alarme
+// Som de desligar o alarme (dois bips curtos e espaçados)
 void somAlarmeDesligando() {
     digitalWrite(buzzerPin, HIGH);         
     delay(150);                             
@@ -666,7 +667,7 @@ void somAlarmeDesligando() {
     digitalWrite(buzzerPin, LOW);
 }
 
-// Som de disparo do alarme 
+// Som de disparo do alarme (um som contínuo com variação)
 void somAlarmeTocando() {
     digitalWrite(ledAlarmeLigado, HIGH);
     digitalWrite(buzzerPin, HIGH);      
@@ -676,17 +677,23 @@ void somAlarmeTocando() {
     delay(200);                            
 }
 
-// Som de ativar um sensor
+// Som de ativar um sensor (um bip mais longo)
 void somAtivandoSensor() {
-    digitalWrite(buzzerPin, HIGH);         
-    delay(800);                             
+    digitalWrite(buzzerPin, HIGH);
+    delay(300);
     digitalWrite(buzzerPin, LOW);
 }
 
-// Som de desativar um sensor
+// Som de desativar um sensor (dois bips mais longos)
 void somDesativandoSensor() {
-    digitalWrite(buzzerPin, HIGH);         
-    delay(1600);                             
+    digitalWrite(buzzerPin, HIGH);
+    delay(300);  
+    // delay(100);  
+    digitalWrite(buzzerPin, LOW);
+    delay(100);
+    digitalWrite(buzzerPin, HIGH);
+    // delay(100);  
+    delay(300);
     digitalWrite(buzzerPin, LOW);
 }
 
