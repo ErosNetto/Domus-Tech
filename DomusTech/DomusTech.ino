@@ -681,20 +681,20 @@ void somAlarmeTocando() {
 // Som de ativar um sensor (um bip mais longo)
 void somAtivandoSensor() {
     digitalWrite(buzzerPin, HIGH);
-    delay(300);
+    delay(400);
     digitalWrite(buzzerPin, LOW);
 }
 
 // Som de desativar um sensor (dois bips mais longos)
 void somDesativandoSensor() {
     digitalWrite(buzzerPin, HIGH);
-    delay(300);  
+    delay(400);  
     // delay(100);  
     digitalWrite(buzzerPin, LOW);
     delay(100);
     digitalWrite(buzzerPin, HIGH);
     // delay(100);  
-    delay(300);
+    delay(400);
     digitalWrite(buzzerPin, LOW);
 }
 
@@ -717,7 +717,8 @@ const int posicaoFechado = 40;    // Ângulo para fechar o portão
 void setupPortao() {  
     pinMode(btnAbreFechaPortao, INPUT_PULLUP);      // Pino de entrada com pull-up interno
     pinMode(pinServoMotor, OUTPUT);                 // Pino de saída para o servo motor
-    // fecharPortao();
+    servoMotor.attach(pinServoMotor);
+    delay(200);
     servoMotor.detach();
 }
 
