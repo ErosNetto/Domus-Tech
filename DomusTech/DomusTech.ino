@@ -60,6 +60,7 @@ bool alarmeAtivo = false;                 // Variável para controlar se o alarm
 bool sensorMovimentoAtivado = true;       // Variável para controlar se o sensor de movimento ficará ativado ou não
 bool sensorPortaAtivado = true;           // Variável para controlar se o sensor de porta ficará ativado ou não
 bool portaoAberto = false;                // Variável para controlar se o portão está aberto ou fechado
+bool luzLCDLigado = true;                 // Variável para controlar se o display está ligado ou desligado
 
 
 
@@ -69,7 +70,16 @@ void mostrarNoLCD(const String& primeiraLinha, const String& segundaLinha) {
     lcd.setCursor(0, 0);
     lcd.print(primeiraLinha);
     lcd.setCursor(0, 1);
-    lcd.print(segundaLinha);
+    lcd.print(segundaLinha); 
+}
+
+// Função para ligar a luz do LCD
+void alteraLuzLCD() {
+    if (luzLCDLigado) {
+        lcd.backlight();
+    } else {
+        lcd.noBacklight();
+    }
 }
 
 
@@ -93,17 +103,20 @@ void setup() {
     sensorMovimentoAtivado = preferences.getBool("sensorMovAtiv", true);
     sensorPortaAtivado = preferences.getBool("sensorPorAtiv", true);
     // portaoAberto = preferences.getBool("portaoAberto", false);
+    luzLCDLigado = preferences.getBool("luzLCDLigado", true);
 
-    // Configura os pinos de entrada e saida
+    // Configura os pinos de entrada e saída
     setupLeds();
     setupAlarme();
     setupPortao();
 
-    // Inicialização
-    lcd.init();                     // Inicializa o LCD
-    lcd.backlight();                // Liga a luz de fundo do LCD
+    // Inicializa o LCD
+    lcd.init();
+
+    // Verifica se a luz de fundo do LCD ficara ligada ou desligada  
+    alteraLuzLCD();
     mostrarNoLCD("   Domus Tech   ", "Carregando...");
-    delay(500);
+    delay(200);
 
     // Inicia as configurações do Wi-Fi
     configurarWiFi();
@@ -134,10 +147,12 @@ void setup() {
 
             Serial.println("LED " + String(ledNumero) + ((ledStateRequest == HIGH) ? ": ON" : ": OFF"));
             
-            digitalWrite(pin, ledStateRequest); // Liga ou desliga o LED
-            ledState[ledNumero - 1] = ledStateRequest; // Atualiza o estado do LED no array
+            // Liga ou desliga o LED
+            digitalWrite(pin, ledStateRequest);
+            // Atualiza o estado do LED no array
+            ledState[ledNumero - 1] = ledStateRequest;
 
-            // Salva o stado dos leds na memoria
+            // Salva o stado dos leds na memória
             saveLEDsPreferences();
 
             String state = (ledStateRequest == HIGH) ? "ON" : "OFF";
@@ -176,7 +191,7 @@ void setup() {
 
             digitalWrite(ledAlarmeLigado, alarmeLigado ? HIGH : LOW);
 
-            // Salva o stado do alarme na memoria
+            // Salva o stado do alarme na memória
             saveAlarmePreferences();
 
             String state = alarmeLigado ? "ligado." : "desligado.";
@@ -209,7 +224,7 @@ void setup() {
                     return;
                 }
 
-                // Salva o estado do sensor na memoria
+                // Salva o estado do sensor na memória
                 saveOpcoesAlarmePreferences();
 
                 String state = sensorMovimentoAtivado ? "ativado." : "desativado.";
@@ -231,7 +246,7 @@ void setup() {
                     return;
                 }
 
-                // Salva o estado do sensor na memoria
+                // Salva o estado do sensor na memória
                 saveOpcoesAlarmePreferences();
 
                 String state = sensorPortaAtivado ? "ativado." : "desativado.";
@@ -246,27 +261,63 @@ void setup() {
     });
 
     // ------------- Rota para controlar o portão ( http://192.168.18.85/portao?state=1 ) -------------
+    // Precisa arrumar a função do portão, pois ela buga no começo
     server.on("/portao", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (request->hasParam("state")) {
             int portaoState = request->getParam("state")->value().toInt();
 
-            if (portaoState == 1 && portaoAberto == false) {
+            // Abre o portão caso ele esteja aberto
+            if (portaoState == 1 && !portaoAberto) {
                 abrirPortao();
                 Serial.println("\nPortão aberto remotamente.");
                 mostrarNoLCD("Portao aberto", "remotamente");
-            } else if (portaoState == 0 && portaoAberto == true) {
+            // Fecha o portão caso ele esteja aberto
+            } else if (portaoState == 0 && portaoAberto) {
                 fecharPortao();
                 Serial.println("\nPortao fechado remotamente.");
                 mostrarNoLCD("Portao fechado", "remotamente");
             } else {
                 request->send(400, "text/plain", "Ação inválida.");
+                return;
             }
 
-            // Salva o estado do portão na memoria
+            // Salva o estado do portão na memória
             // savePortaoPreferences();
 
             String state = (portaoState) ? "aberto." : "fechado.";
             request->send(200, "text/plain", "O portão está " + state);
+        } else {
+            request->send(400, "text/plain", "Parâmetro 'state' ausente.");
+        }
+    });
+
+    // ------------- Rota para controlar a luz de fundo do display LCD ( http://192.168.18.85/display?state=1 ) -------------
+    server.on("/display", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (request->hasParam("state")) {
+            int displayState = request->getParam("state")->value().toInt();
+
+            // Liga o display caso ele esteja desligado
+            if (displayState == 1 && !luzLCDLigado) {
+                luzLCDLigado = true;
+                alteraLuzLCD();
+                Serial.println("\nLuz LCD ligada remotamente.");
+                mostrarNoLCD("LCD ligado", "remotamente");
+            // Desliga o display caso ele esteja ligado
+            } else if (displayState == 0 && luzLCDLigado) {
+                luzLCDLigado = false;
+                alteraLuzLCD();
+                Serial.println("\nLuz LCD desligada remotamente.");
+                mostrarNoLCD("LCD desligado", "remotamente");
+            } else {
+                request->send(400, "text/plain", "Ação inválida.");
+                return;
+            }
+
+            // Salva o estado do display na memória
+            saveLCDPreferences();
+
+            String state = (displayState) ? "ligado." : "desligado.";
+            request->send(200, "text/plain", "O display está " + state);
         } else {
             request->send(400, "text/plain", "Parâmetro 'state' ausente.");
         }
@@ -290,7 +341,8 @@ void setup() {
     server.on("/opcoes", HTTP_GET, [](AsyncWebServerRequest *request) {
         String opcoes = "";
         opcoes += "SensorPIR: " + String(sensorMovimentoAtivado) + "\n";
-        opcoes += "SensorPorta: " + String(sensorPortaAtivado);
+        opcoes += "SensorPorta: " + String(sensorPortaAtivado) + "\n";
+        opcoes += "LuzLCDSistema: " + String(luzLCDLigado);
 
         Serial.println("\nEnviando opções.");
         request->send(200, "text/plain", opcoes);
@@ -343,6 +395,9 @@ void saveOpcoesAlarmePreferences() {
 //     preferences.putBool("portaoAberto", portaoAberto);
 // }
 
+void saveLCDPreferences() {
+    preferences.putBool("luzLCDLigado", luzLCDLigado);
+}
 
 
 
@@ -352,14 +407,15 @@ void saveOpcoesAlarmePreferences() {
 // Inicia as configurações de Wi-Fi
 void configurarWiFi() {
     // Verifica se há redes Wi-Fi salvas no WiFiManager
-    if (hasSavedNetworks()) {
+    if (temRedesSalvas()) {
         Serial.println("Wi-Fi salvo encontrado. Tentando conectar...");
         mostrarNoLCD("Wi-Fi salvo", "Conectando...");
         delay(2000);
 
         // configurarIPFixo(); // Configura o IP fixo antes de tentar conectar
 
-        WiFi.begin(); // Tenta conectar ao Wi-Fi salvo
+        // Tenta conectar ao Wi-Fi salvo
+        WiFi.begin();
 
         // Aguarda até conectar ou até o timeout de 10 segundos
         unsigned long startAttemptTime = millis();
@@ -388,9 +444,9 @@ void configurarWiFi() {
 }
 
 // Função para verificar se há redes Wi-Fi salvas no WiFiManager
-bool hasSavedNetworks() {
-    WiFi.mode(WIFI_STA); // Garante que estamos no modo estação
-    WiFi.begin();        // Inicia o WiFi com credenciais salvas, se houver
+bool temRedesSalvas() {
+    WiFi.mode(WIFI_STA);
+    WiFi.begin();        
     delay(200);
 
     // Verifica se temos um SSID salvo
@@ -432,17 +488,15 @@ void iniciarModoConfiguracaoWiFi() {
 //     }
 // }
 
-// Função para escrever o IP da ESP no terminal e no LCD 
+// Função para escrever o IP da ESP no terminal e no LCD (Com IP definido)
 // void ipTexto() {
 //     Serial.println("IP estático configurado: " + local_IP.toString());
 //     mostrarNoLCD("IP atribuido:", local_IP.toString());
 // }
 
+// Função para escrever o IP da ESP no terminal e no LCD (Sem IP definido)
 void ipTexto() {
-    // Exibe o IP atribuído pela ESP diretamente
     Serial.println("IP atribuído pela ESP: " + WiFi.localIP().toString());
-
-    // Exibe o IP no LCD diretamente
     mostrarNoLCD("IP atribuido:", WiFi.localIP().toString());
 }
 
@@ -469,7 +523,7 @@ void setupLeds() {
 }
 
 // Função para alterar o stado dos leds
-void toggleLed(int ledIndex, int ledPin, const char* ledName) {
+void alteraLed(int ledIndex, int ledPin, const char* ledName) {
     // Alterna o estado do LED e salva o novo estado
     ledState[ledIndex] = !ledState[ledIndex];
     digitalWrite(ledPin, ledState[ledIndex]);
@@ -489,21 +543,21 @@ void loopLeds() {
 
     // Checa e alterna o LED 1
     if (digitalRead(btnLedPin1) == LOW) {
-        toggleLed(0, ledPin1, "LED 1");
+        alteraLed(0, ledPin1, "LED 1");
         stateChanged = true;
         delay(200);
     }
 
     // Checa e alterna o LED 2
     if (digitalRead(btnLedPin2) == LOW) {
-        toggleLed(1, ledPin2, "LED 2");
+        alteraLed(1, ledPin2, "LED 2");
         stateChanged = true;
         delay(200);
     }
 
     // Checa e alterna o LED 3
     if (digitalRead(btnLedPin3) == LOW) {
-        toggleLed(2, ledPin3, "LED 3");
+        alteraLed(2, ledPin3, "LED 3");
         stateChanged = true;
         delay(200);
     }
@@ -636,7 +690,7 @@ void somDesativandoSensor() {
     digitalWrite(buzzerPin, LOW);
 }
 
-// Função para desliga o buzzer ou qualquer som do alarme
+// Função para parar qualquer som do alarme
 void pararSomAlarme() {
     digitalWrite(buzzerPin, LOW);
 }
@@ -646,6 +700,7 @@ void pararSomAlarme() {
 
 
 // ------------- CONFIGURAÇÃO DO PORTÃO ------------- //
+// Precisa arrumar a função do portão, pois ela buga no começo
 // Definições dos pinos e variáveis
 Servo servoMotor;                 // Instância do servo
 const int posicaoAberto = 165;    // Ângulo para abrir o portão
@@ -688,7 +743,7 @@ void abrirPortao() {
         delay(10);                      // Delay maior para suavizar o movimento
     }
     portaoAberto = true;                // Atualiza o estado para aberto
-    delay(800);
+    delay(900);
     servoMotor.detach();                // Desliga o controle do servo motor 
 }
 
@@ -700,6 +755,6 @@ void fecharPortao() {
         delay(10);                      // Delay maior para suavizar o movimento
     }
     portaoAberto = false;               // Atualiza o estado para fechado
-    delay(800);
+    delay(900);
     servoMotor.detach();                // Desliga o controle do servo motor 
 }
