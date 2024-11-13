@@ -145,18 +145,20 @@ void setup() {
                 return;
             }
 
-            Serial.println("LED " + String(ledNumero) + ((ledStateRequest == HIGH) ? ": ON" : ": OFF"));
-            
+            Serial.println("LED " + String(ledNumero) + ((ledStateRequest == HIGH) ? " ligado remotamente" : " desligado remotamente"));
+            mostrarNoLCD("LED " + String(ledNumero) + ((ledStateRequest == HIGH) ? " ligado" : " desligado "), "remotamente");
+
             // Liga ou desliga o LED
             digitalWrite(pin, ledStateRequest);
+
             // Atualiza o estado do LED no array
             ledState[ledNumero - 1] = ledStateRequest;
 
             // Salva o stado dos leds na memória
             saveLEDsPreferences();
 
-            String state = (ledStateRequest == HIGH) ? "ON" : "OFF";
-            request->send(200, "text/plain", "LED " + String(ledNumero) + " esta " + state);
+            String state = (ledStateRequest == HIGH) ? "ligado" : "desligado";
+            request->send(200, "text/plain", "LED " + String(ledNumero) + " está " + state);
         } else {
             request->send(400, "text/plain", "Parâmetro 'ledNum' ou 'state' ausentes.");
         }
@@ -529,13 +531,12 @@ void alteraLed(int ledIndex, int ledPin, const char* ledName) {
     digitalWrite(ledPin, ledState[ledIndex]);
 
     // Exibe mensagem de estado no Serial e no LCD
-    if (ledState[ledIndex]) {
-        Serial.printf("\n%s ligado internamente.\n", ledName);
-        mostrarNoLCD(ledName, "ligado internamente");
-    } else {
-        Serial.printf("\n%s desligado internamente.\n", ledName);
-        mostrarNoLCD(ledName, "desligado internamente");
-    }
+    String estado = ledState[ledIndex] ? "ligado" : "desligado";
+    
+    Serial.printf("\n%s %s internamente.\n", ledName, estado.c_str());
+
+    // Exibe no LCD
+    mostrarNoLCD(String(ledName) + " " + estado, "internamente");
 }
 
 void loopLeds() {
